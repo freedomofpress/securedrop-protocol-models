@@ -3,13 +3,24 @@ begin
 
 builtins: symmetric-encryption, diffie-hellman, signing
 
-rule Register_pk:
+rule Register_journalist_pk:
   [ Fr(~ltk) ]
   -->
-  [ !Ltk($A, ~ltk), !Pk($A, pk(~ltk)), Out(pk(~ltk))]
+  [ !Ltk_journalist($A, ~ltk), !Pk_journalist($A, pk(~ltk)), Out(pk(~ltk))]
 
-rule Reveal_ltk:
-  [ !Ltk(A, ltk) ]
+rule Reveal_journalist_ltk:
+  [ !Ltk_journalist(A, ltk) ]
+  --[ Reveal(A), SomeCompromise() ]->
+  [ Out(ltk) ]
+
+rule Register_source_pk:
+  let public_component = 'g'^~ltk in
+  [ Fr(~ltk) ]
+  -->
+  [ !Ltk_source($A, ~ltk), !Pk_source($A, public_component), Out(public_component)]
+
+rule Reveal_source_ltk:
+  [ !Ltk_source(A, ltk) ]
   --[ Reveal(A), SomeCompromise() ]->
   [ Out(ltk) ]
 
@@ -17,7 +28,7 @@ rule Journalist_Init:
   let je_pk = 'g'^~je_sk
       sig_je_pk = sign(je_pk, j_sk)
   in
-  [ !Ltk($J, j_sk)
+  [ !Ltk_journalist($J, j_sk)
   , Fr(~je_sk)
   ]
   --[ ReachJournalistInit($J) ]->
@@ -30,8 +41,8 @@ rule Source_Submit:
       c = senc(<~m, s_pk>, k)
       me_pk = 'g'^~me_sk
   in
-  [ !Pk($J, j_pk)
-  , !Pk($S, s_pk)
+  [ !Pk_journalist($J, j_pk)
+  , !Pk_source($S, s_pk)
   , In(<je_pk, sig_je_pk>)
   , Fr(~m)
   , Fr(~me_sk) ]
@@ -74,23 +85,14 @@ rule Source_Recv:
   in
   [ In(<c, me_pk>)
   , Source_Submit($S)
-  , !Ltk($S, s_sk) ]
+  , !Ltk_source($S, s_sk) ]
   --[ Source_Read($S, m) ]->
   []
 
 restriction Eq:
-  "All t1 t2 #x. Eq(t1, t2) @ #x ==> t1 = t2"
+  "All t1 t2 #x. Eq(t1, t2) @ #x ==> t1 = t2" 
 
 lemma Executability:
-  exists-trace
-  "Ex #t1 #t2 #t3 #t4 s j m1 m2. 
-        ReachJournalistInit(j) @ #t1 
-      & Source_Submission(s, j, m1) @ #t2 
-      & Journalist_Read(j, m1) @ #t3 
-      & Journalist_Response(j, m1, m2) @ #t4 
-      & (not Ex #x. SomeCompromise() @ #x)"  
-
-lemma Executability_with_source_read:
   exists-trace
   "Ex #t1 #t2 #t3 #t4 #t5 s j m1 m2. 
         ReachJournalistInit(j) @ #t1 
