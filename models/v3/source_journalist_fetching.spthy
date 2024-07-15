@@ -105,6 +105,14 @@ rule Source_Recv:
 restriction Eq:
   "All t1 t2 #x. Eq(t1, t2) @ #x ==> t1 = t2" 
 
+lemma Executability_Small:
+  exists-trace
+  "Ex #t1 #t2 #t3 s j m1 mid. 
+        ReachJournalistInit(j) @ #t1 
+      & Source_Submission(s, j, m1) @ #t2 
+      & Journalist_Fetched(j, mid) @ #t3
+      & (not Ex #x. SomeCompromise() @ #x)"
+
 lemma Executability:
   exists-trace
   "Ex #t1 #t2 #t3 #t4 #t5 #t6 s j m1 m2 mid. 
