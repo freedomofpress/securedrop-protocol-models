@@ -8,6 +8,11 @@ USER:=$(shell whoami)
 run:
 	@tamarin-prover-release +RTS -N$(N_THREADS) -RTS interactive "$(DIR)" --port=$(PORT)
 
+# runs the tamarin-prover with the "auto-sources" flag which tries to automatically generate source lemmas
+# to remove partial deconstructions
+run_auto:
+	@tamarin-prover-release +RTS -N$(N_THREADS) -RTS interactive "$(DIR)" --port=$(PORT) --auto-sources
+
 # cleans up the graph images from interactive mode
 # (necessary to prevent disk space issues)
 clean:
