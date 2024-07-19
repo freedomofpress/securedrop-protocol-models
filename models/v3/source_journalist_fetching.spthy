@@ -47,6 +47,8 @@ rule Source_Submit:
   in
   [ !Pk($J, j_pk)
   , !Pk_dh($S, s_pk)
+  // this fact ensures that only a journalist could have generated the key (and the signature) 
+  // -> prevents partial deconstructions
   , !Journalist_Init($J, jc_pk)
   , In(<je_pk, sig_je_pk, jc_pk, sig_jc_pk>)
   , Fr(~m)
@@ -64,7 +66,8 @@ rule Journalist_Fetch:
   in
   [ In(<pmgdh, enc_m_id>)
   , !Ltk_dh($J, jc_sk) ]
-  --[ Journalist_Fetched($J, m_id) ]->
+  --[ Journalist_Fetched($J, m_id)
+    , Journalist_Fetch_OUT(m_id, kmid) ]->
   [ Out(m_id)
   , Journalist_Fetch($J, m_id) ]
 
@@ -110,6 +113,13 @@ restriction Eq:
 
 restriction Neq:
   "All x #t. Neq(x,x) @ #t ==> F"
+
+// prevents partial deconstruction: to encrypt something, you need to know the plaintext and the encryption key
+lemma encryption [sources]:
+  "All m_id key #t.
+    Journalist_Fetch_OUT(m_id, key) @ #t
+    ==>
+    (Ex #x. K(m_id) @ #x & #x < #t) & (Ex #x. K(key) @ #x & #x < #t)"
 
 lemma Executability:
   exists-trace
