@@ -59,8 +59,7 @@ rule Source_Submit:
   --[ Eq(verify(sig_je_pk, je_pk, j_pk), true)
     , Eq(verify(sig_jc_pk, jc_pk, j_pk), true)
     , Neq(je_pk, jc_pk)
-    , Source_Submission($S, $J, ~m)
-    , Symmetric_Encryption_Source_OUT(<~m, s_pk, sc_pk>, k)]->
+    , Source_Submission($S, $J, ~m) ]->
   [ Out(<c, m_gdh, me_pk>)
   , Source_Submit($S, $J)
   , !Source_Keys(s_pk, sc_pk, k) ]
@@ -85,8 +84,7 @@ rule Journalist_Recv:
   , !Source_Keys(s_pk, sc_pk, me_pk^je_sk)
   // , Journalist_Fetch($J, m_id) 
 ]
-  --[ Journalist_Read($J, m)
-    , Symmetric_Encryption_Source_IN(<m, s_pk, sc_pk>, k) ]->
+  --[ Journalist_Read($J, m) ]->
   [ Journalist_Recv($J, m, s_pk, sc_pk) ]
 
 rule Journalist_Reply:
@@ -100,8 +98,7 @@ rule Journalist_Reply:
   , Fr(~m)
   , Fr(~me_sk)
   , Fr(~je_sk) ]
-  --[ Journalist_Response($J, m_old, ~m)
-    , Symmetric_Encryption_Journalist_OUT(<~m, je_pk>, k) ]->
+  --[ Journalist_Response($J, m_old, ~m) ]->
   [ Out(<c, m_gdh, me_pk>) ]
 
 // rule Source_Fetch:
@@ -133,20 +130,6 @@ restriction Eq:
 
 restriction Neq:
   "All x #t. Neq(x,x) @ #t ==> F"
-
-// prevents partial deconstruction: to encrypt something, you need to know the plaintext and the encryption key
-lemma Symmetric_Encryption [sources]:
-  "All msg key #t.
-    Symmetric_Encryption_Source_IN(msg, key) @ #t
-    ==>
-    (Ex #x. Symmetric_Encryption_Source_OUT(msg, key) @ #x & #x < #t)
-    | ((Ex #x. K(msg) @ #x & #x < #t) & (Ex #x. K(key) @ #x & #x < #t))"
-
-// lemma Symmetric_Encryption_Adversary [sources]:
-//   "All msg key #t.
-//     Symmetric_Encryption_Adversary(msg, key) @ #t
-//     ==>
-//     (Ex #x. K(msg) @ #x & #x < #t) & (Ex #x. K(key) @ #x & #x < #t)"
 
 lemma Executability_Submission:
   exists-trace
