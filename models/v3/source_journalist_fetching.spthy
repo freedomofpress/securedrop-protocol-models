@@ -57,6 +57,7 @@ rule Source_Submit:
   --[ Eq(verify(sig_je_pk, je_pk, j_pk), true)
     , Eq(verify(sig_jc_pk, jc_pk, j_pk), true)
     , Neq(je_pk, jc_pk)
+    , Neq(s_pk, sc_pk)
     , Source_Submission($S, $J, ~m) ]->
   [ Out(<c, m_gdh, me_pk>)
   , !Source_Keys(s_pk, sc_pk, k) ]
