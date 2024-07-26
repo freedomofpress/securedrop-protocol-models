@@ -1,4 +1,4 @@
-theory SourceJournalistMessaging
+theory SecureDrop
 begin
 
 builtins: symmetric-encryption, diffie-hellman, signing
