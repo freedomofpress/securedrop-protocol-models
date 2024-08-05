@@ -74,8 +74,6 @@ rule Journalist_Fetch:
   // this action ensures that the adversary needs to know m_id and kmid to generate enc_m_id
   // -> prevents partial deconstructions
   --[ Symmetric_Encryption_Adversary(m_id, kmid)
-    // , Neq(pmgdh, DH_neutral)
-    // , Neq(pmgdh, 'g') 
     , Eq(flag, 'm_id') // with this term we enforce Tamarin to "use" the decryted message. If terms are not used, Tamarin doesn't model whether decryption failed or not.
   ]->
   [ Out(m_id)
