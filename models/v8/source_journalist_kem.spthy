@@ -1,7 +1,8 @@
 theory SourceJournalistMessaging
 begin
 
-builtins: symmetric-encryption, diffie-hellman, signing
+builtins: symmetric-encryption, asymmetric-encryption, diffie-hellman, signing
+functions: hkdf/1
 
 rule Register_pk:
   [ Fr(~ltk) ]
@@ -25,7 +26,7 @@ rule Reveal_dh_ltk:
   [ Out(ltk) ]
 
 rule Journalist_Init:
-  let je_pk = 'g'^~je_sk
+  let je_pk = pk(~je_sk)
       sig_je_pk = sign(<'ephemeral', je_pk>, j_sk)
       sig_jc_pk = sign(<'fetch', jc_pk>, j_sk)
   in
@@ -40,29 +41,32 @@ rule Journalist_Init:
   ]
 
 rule Source_Submit:
-  let k = je_pk^~me_sk
+  let k = hkdf(~ss)
       c = senc(<~m, s_pk>, k)
       me_pk = 'g'^~me_sk
       m_gdh = jc_pk^~me_sk 
+      ss_encap = aenc(~ss, je_pk)
   in
   [ !Pk($J, j_pk)
   , !Pk_dh($S, s_pk)
   , Journalist_Init($J, jc_pk)
   , In(<je_pk, sig_je_pk, jc_pk, sig_jc_pk>)
   , Fr(~m)
+  , Fr(~ss)
   , Fr(~me_sk) ]
   --[ Eq(verify(sig_je_pk, <'ephemeral', je_pk>, j_pk), true)
     , Eq(verify(sig_jc_pk, <'fetch', jc_pk>, j_pk), true)
     , Source_Submission($S, $J, ~m)
     ]->
-  [ Out(<c, m_gdh, me_pk>) ]
+  [ Out(<c, m_gdh, me_pk, ss_encap>) ]
 
 rule Journalist_Recv:
-  let k = me_pk^je_sk 
+  let ss = adec(ss_encap, je_sk)
+      k = hkdf(ss)
       msg = sdec(c, k)
       m = fst(msg)
   in
-  [ In(<c,me_pk>)
+  [ In(<c, me_pk, ss_encap>)
   , Journalist_Ephemeral_Key($J, je_sk) ]
   --[ Journalist_Read($J, m) ]->
   []
