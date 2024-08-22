@@ -38,3 +38,13 @@ We also need to check that $JC_{PK} != JE_{PK}$. Otherwise the source leaks $k =
 ### `source_newsroom.spthy`
 
 This model extends `v2/source_journalist_fetching.spthy`. Now, the source communicates with a newsroom (not a journalist). A valid recipient is any journalist who was verified by the newsroom.
+
+## v8
+
+### `source_journalist_kem.spthy`
+
+This model extends `results/key_type/source_journalist_typed.spthy` by encrypting the message using a KEM instead of DH public key exchange. This makes the scheme more secure (PQ?) and speeds up the Tamarin proving.
+
+### `source_journalist_fetching_kem.spthy`
+
+This model extends `v3/source_journalist_fetching.spthy` by encrypting the message using a KEM instead of DH public key exchange.
