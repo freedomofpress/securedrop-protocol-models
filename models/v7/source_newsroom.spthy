@@ -40,7 +40,7 @@ rule Journalist_Enrollment:
   [ !Ltk($NR, nr_sk)
   , !Pk($J, j_pk) ]
   --[ Journalist_Verified($NR, $J) ]->
-  [ Out(sig_j_pk) ]
+  [ Out(<j_pk, sig_j_pk>) ]
 
 rule Source_Submits:
   let k = je_pk^~me_sk
@@ -48,9 +48,8 @@ rule Source_Submits:
       me_pk = 'g'^~me_sk
   in
   [ !Pk($NR, nr_pk)
-  , !Pk($J, j_pk)
   , !Pk_dh($S, s_pk)
-  , In(<je_pk, sig_je_pk, j_pk, sig_j_pk>)
+  , In(<j_pk, sig_j_pk, je_pk, sig_je_pk, j_pk, sig_j_pk>)
   , Fr(~m)
   , Fr(~me_sk) ]
   --[ Eq(verify(sig_j_pk, j_pk, nr_pk), true)
@@ -114,10 +113,17 @@ lemma Executability_Journalist_Response:
       & Source_Read(s, m2) @ #t2
       & (not Ex #x. SomeCompromise() @ #x)"
 
-lemma Confidentiality_Source_Submit:
+lemma Confidentiality_Submission:
   all-traces
-  "All #t1 s nr m. Source_Submission(s, nr, m) @ #t1
+  "All #t s nr m. Source_Submission(s, nr, m) @ #t
     ==> (not Ex #x. K(m) @ #x) | (Ex #x. SomeCompromise() @ #x)"
+
+lemma Confidentiality_Response:
+  all-traces
+  "All #t1 #t2 s nr j m_old m. 
+    Source_Submission(s, nr, m_old) @ #t1 & Journalist_Response(j, m_old, m) @ #t2
+    ==> 
+    ((not Ex #x. K(m_old) @ #x) & (not Ex #x. K(m) @ #x)) | (Ex #x. SomeCompromise() @ #x)"
 
 lemma Verified_Journalist:
   all-traces
@@ -125,10 +131,5 @@ lemma Verified_Journalist:
       Source_Submission(s, nr, m) @ #t1
     & Journalist_Read(j, m) @ #t2
     ==> (Ex #x. Journalist_Verified(nr, j) @ #x & #x < #t1) | (Ex #x. SomeCompromise() @ #x)"
-
-lemma Confidentiality_Journalist_Response:
-  all-traces
-  "All #t1 #t2 s nr j m_old m. Source_Submission(s, nr, m_old) @ #t1 & Journalist_Response(j, m_old, m) @ #t2
-    ==> (not Ex #x. K(m) @ #x) | (Ex #x. SomeCompromise() @ #x)"
 
 end
