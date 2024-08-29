@@ -200,6 +200,14 @@ lemma Executability_Response:
     & Source_Read(s, m) @ #t4
     & (not Ex #x. SomeCompromise() @ #x)"
 
+lemma Only_Journalists_Can_Send:
+  all-traces
+  "All #t s m.
+    Source_Read(s, m) @ #t
+    ==>
+    (Ex j m_old #x. Journalist_Response(j, m_old, m) @ #x) | (Ex #x. SomeCompromise() @ #x)"
+  
+
 lemma Confidentiality_Submission:
   all-traces
   "All #t1 s nr m. Source_Submission(s, nr, m) @ #t1
