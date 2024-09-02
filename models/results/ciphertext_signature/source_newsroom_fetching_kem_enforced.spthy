@@ -59,7 +59,7 @@ rule Source_Submit [derivchecks]:
   let sc_pk = 'g'^sc_sk
       jc_pk = 'g'^jc_sk
       k = hkdf(~ss)
-      m = <~msg, s_pk, sc_pk>
+      m = <'msg', ~msg, s_pk, sc_pk>
       c = senc(m, k)
       ss_encap = aenc(~ss, je_pk)
       me_pk = 'g'^~me_sk
@@ -102,7 +102,7 @@ rule Journalist_Recv [derivchecks]:
       k = hkdf(ss)
       sc_pk = 'g'^sc_sk
   in
-  [ In(<senc(<msg, s_pk, sc_pk>, k), ss_encap>)
+  [ In(<senc(<'msg', msg, s_pk, sc_pk>, k), ss_encap>)
   , Journalist_Ephemeral_Key($J, je_sk)
   , Journalist_Fetch($J, m_id) 
   , !Pk($S, s_pk)
@@ -118,7 +118,7 @@ rule Journalist_Recv [derivchecks]:
 rule Journalist_Reply:
   let k = hkdf(~ss)
       je_pk = pk(~je_sk)
-      m = <~msg, je_pk>
+      m = <'msg', ~msg, je_pk>
       c = senc(m, k)
       ss_encap = aenc(~ss, s_pk)
       me_pk = 'g'^~me_sk
@@ -150,11 +150,8 @@ rule Source_Fetch:
 rule Source_Recv:
   let ss = adec(ss_encap, s_sk)
       k = hkdf(ss)
-      m = sdec(c, k)
-      msg = fst(m)
-      je_pk = snd(m)
   in
-  [ In(<c, me_pk, ss_encap>)
+  [ In(<senc(<'msg', msg, je_pk>, k), me_pk, ss_encap>)
   , Source_Fetch($S, m_id)
   , !Ltk($S, s_sk) ]
   --[ Source_Read($S, msg) ]->
