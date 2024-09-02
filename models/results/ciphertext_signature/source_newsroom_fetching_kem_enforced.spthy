@@ -56,7 +56,8 @@ rule Journalist_Enrollment:
   , !Journalist_Enrolled($NR, $J) ]
 
 rule Source_Submit [derivchecks]:
-  let sc_pk = 'g'^sc_sk
+  let s_pk = pk(~s_sk)
+      sc_pk = 'g'^sc_sk
       jc_pk = 'g'^jc_sk
       k = hkdf(~ss)
       m = <'msg', ~msg, s_pk, sc_pk>
@@ -66,7 +67,7 @@ rule Source_Submit [derivchecks]:
       m_gdh = jc_pk^~me_sk 
   in
   [ !Pk($NR, nr_pk)
-  , !Pk($S, s_pk)
+  , Fr(~s_sk)
   , !Ltk_dh($S, sc_sk)
   , In(<j_pk, sig_j_pk, je_pk, sig_je_pk, jc_pk, sig_jc_pk>)
   , Fr(~msg)
@@ -79,7 +80,8 @@ rule Source_Submit [derivchecks]:
     , Symmetric_Encryption_OUT(m, k)
     , Source_Submission($S, $NR, ~msg)
     , Running_Submission($S, $NR, k) ]->
-  [ Out(<c, m_gdh, me_pk, ss_encap>) ]
+  [ Out(<c, m_gdh, me_pk, ss_encap>)
+  , !Source_Key($S, ~s_sk) ]
 
 rule Journalist_Fetch:
   let kmid = pmgdh^jc_sk 
@@ -153,7 +155,7 @@ rule Source_Recv:
   in
   [ In(<senc(<'msg', msg, je_pk>, k), me_pk, ss_encap>)
   , Source_Fetch($S, m_id)
-  , !Ltk($S, s_sk) ]
+  , !Source_Key($S, s_sk) ]
   --[ Source_Read($S, msg) ]->
   []
 
