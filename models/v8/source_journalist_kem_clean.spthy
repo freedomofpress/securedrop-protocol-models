@@ -163,53 +163,55 @@ restriction Eq:
    or the adversary got the ciphertext from an output in the protocol.
 */
 lemma Symmetric_Encryption [sources]:
-  "All m key #t.
-    Symmetric_Encryption_IN(m, key) @ #t
-    ==>
-    ((Ex #x. KU(m) @ #x & #x < #t) & (Ex #x. KU(key) @ #x & #x < #t))
-    | (Ex #x. Symmetric_Encryption_OUT(m, key) @ #x & #x < #t)"
+"All m key #t.
+        Symmetric_Encryption_IN(m, key) @ #t
+  ==>   ( (Ex #x. KU(m) @ #x & #x < #t)
+        & (Ex #x. KU(key) @ #x & #x < #t))
+      | (Ex #x. Symmetric_Encryption_OUT(m, key) @ #x & #x < #t)"
 
 lemma Verified_Journalist [reuse]:
-  all-traces
-  "All #t1 #t2 s nr j m. 
-      Source_Submission(s, j, nr, m) @ #t1
-    & Journalist_Read(j, m) @ #t2
-    ==> (Ex #x. Journalist_Verified(nr, j) @ #x) | (Ex #x. SomeCompromise() @ #x)"  
+"All #t1 #t2 s nr j m. 
+        Source_Submission(s, j, nr, m) @ #t1
+      & Journalist_Read(j, m) @ #t2
+  ==>   (Ex #x. Journalist_Verified(nr, j) @ #x)
+      | (Ex #x. SomeCompromise() @ #x)"
 
 lemma Executability_Submission:
-  exists-trace
-  "Ex #t1 #t2 s j nr m.
-      Source_Submission(s, j, nr, m) @ #t1
-    & Journalist_Read(j, m) @ #t2
-    & (not Ex #x. SomeCompromise() @ #x)"
+exists-trace
+"Ex #t1 #t2 s j nr m.
+        Source_Submission(s, j, nr, m) @ #t1
+      & Journalist_Read(j, m) @ #t2
+      & (not Ex #x. SomeCompromise() @ #x)"
 
 lemma Executability_Response:
-  exists-trace
-  "Ex #t1 #t2 #t3 #t4 s j nr m_old m.
-      Source_Submission(s, j, nr, m_old) @ #t1
-    & Journalist_Read(j, m_old) @ #t2
-    & Journalist_Response(j, m_old, m) @ #t3
-    & Source_Read(s, m) @ #t4
-    & (not Ex #x. SomeCompromise() @ #x)"
+exists-trace
+"Ex #t1 #t2 #t3 #t4 s j nr m_old m.
+        Source_Submission(s, j, nr, m_old) @ #t1
+      & Journalist_Read(j, m_old) @ #t2
+      & Journalist_Response(j, m_old, m) @ #t3
+      & Source_Read(s, m) @ #t4
+      & (not Ex #x. SomeCompromise() @ #x)"
 
 lemma Confidentiality_Submission:
-  all-traces
-  "All #t1 s j nr m. Source_Submission(s, j, nr, m) @ #t1
-    ==> (not Ex #x. K(m) @ #x) | (Ex #x. SomeCompromise() @ #x)"
+"All #t1 s j nr m. 
+        Source_Submission(s, j, nr, m) @ #t1
+  ==>   (not Ex #x. K(m) @ #x) 
+      | (Ex #x. SomeCompromise() @ #x)"
 
 lemma Confidentiality_Response:
-  all-traces
-  "All #t1 #t2 s j nr m_old m. 
-    Source_Submission(s, j, nr, m_old) @ #t1 & Journalist_Response(j, m_old, m) @ #t2
-    ==> 
-    ((not Ex #x. K(m_old) @ #x) & (not Ex #x. K(m) @ #x)) | (Ex #x. SomeCompromise() @ #x)"
+"All #t1 #t2 s j nr m_old m. 
+        Source_Submission(s, j, nr, m_old) @ #t1 
+      & Journalist_Response(j, m_old, m) @ #t2
+  ==>   ( (not Ex #x. K(m_old) @ #x) 
+        & (not Ex #x. K(m) @ #x)) 
+      | (Ex #x. SomeCompromise() @ #x)"
 
 lemma Non_Injective_Key_Agreement_Submission:
-  all-traces
-  "All #t source journalist k. (Commit_Submission(source, journalist, k) @ #t) 
-    ==>   (Ex #x. Running_Submission(journalist, source, k) @ #x) 
-        | (Ex #x. Reveal(source) @ #x)
-        | (Ex #x. Reveal(journalist) @ #x)"
+"All #t source journalist k. 
+        Commit_Submission(source, journalist, k) @ #t
+  ==>   (Ex #x. Running_Submission(journalist, source, k) @ #x) 
+      | (Ex #x. Reveal(source) @ #x)
+      | (Ex #x. Reveal(journalist) @ #x)"
   
 
 end
