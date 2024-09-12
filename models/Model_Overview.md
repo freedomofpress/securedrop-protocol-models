@@ -48,3 +48,7 @@ This model extends `results/key_type/source_journalist_typed.spthy` by encryptin
 ### `source_journalist_fetching_kem.spthy`
 
 This model extends `v3/source_journalist_fetching.spthy` by encrypting the message using a KEM instead of DH public key exchange.
+
+### `source_journalist_kem_clean.spthy`
+
+Up to v8, this is the most up-to-date version. This includes dedicated key registration and reveal rules for all the keys (and usage in the security properties).
