@@ -1,8 +1,14 @@
 theory SecureDrop
 begin
 
-builtins: symmetric-encryption, asymmetric-encryption, diffie-hellman, signing
+builtins: symmetric-encryption, diffie-hellman, signing
+
+// KDF
 functions: hkdf/1
+
+// KEM
+functions: encap/2, decap/2
+equations: decap(encap(k, pk(sk)), sk) = k
 
 // Rules for registering the keys
 
@@ -110,7 +116,7 @@ rule Source_Submit [derivchecks]:
       k = hkdf(~ss)
       m = <'msg', ~msg, s_pk, sc_pk, $J>
       c = senc(m, k)
-      ss_encap = aenc(~ss, je_pk)
+      ss_encap = encap(~ss, je_pk)
       me_pk = 'g'^~me_sk
       m_gdh = jc_pk^~me_sk 
   in
@@ -146,7 +152,7 @@ rule Journalist_Fetch:
   , Journalist_Fetch($J, m_id) ]
 
 rule Journalist_Recv [derivchecks]:
-  let ss = adec(ss_encap, je_sk)
+  let ss = decap(ss_encap, je_sk)
       k = hkdf(ss)
       sc_pk = 'g'^sc_sk
       m = <flag, msg, s_pk, sc_pk, $J>
@@ -165,7 +171,7 @@ rule Journalist_Reply:
   let k = hkdf(~ss)
       m = <'msg', ~msg, $J>
       c = senc(m, k)
-      ss_encap = aenc(~ss, s_pk)
+      ss_encap = encap(~ss, s_pk)
       me_pk = 'g'^~me_sk
       m_gdh = sc_pk^~me_sk
   in
@@ -194,7 +200,7 @@ rule Source_Fetch:
   , Source_Fetch($S, m_id) ]
 
 rule Source_Recv:
-  let ss = adec(ss_encap, s_sk)
+  let ss = decap(ss_encap, s_sk)
       k = hkdf(ss)
       m = <flag, msg, $J>
   in
@@ -213,7 +219,7 @@ rule Source_Reply [derivchecks]:
       k = hkdf(~ss)
       m = <'msg', ~msg, s_pk, sc_pk, $J>
       c = senc(m, k)
-      ss_encap = aenc(~ss, je_pk)
+      ss_encap = encap(~ss, je_pk)
       me_pk = 'g'^~me_sk
       m_gdh = jc_pk^~me_sk 
   in
