@@ -324,19 +324,19 @@ lemma Confidentiality_Journalist_Message:
       | (Ex #x. Reveal_Source_Encryption_Key(s) @ #x)"
 
 lemma Non_Injective_Key_Agreement:
-"All #t s j k. 
-        Commit(j, s, k) @ #t
-  ==>   (Ex #x. Running(s, j, k) @ #x) 
-      | (Ex #x. Reveal(s) @ #x)
-      | (Ex #x. Reveal(j) @ #x)"
+"All #t a b k. 
+        Commit(b, a, k) @ #t
+  ==>   (Ex #x. Running(a, b, k) @ #x) 
+      | (Ex #x. Reveal(a) @ #x)
+      | (Ex #x. Reveal(b) @ #x)"
   
 lemma Injective_Key_Agreement:
-"All #t s j k. 
-        Commit(j, s, k) @ #t
-  ==>   (Ex #x. Running(s, j, k) @ #x 
+"All #t a b k. 
+        Commit(b, a, k) @ #t
+  ==>   (Ex #x. Running(a, b, k) @ #x 
               & #x < #t
-              & not (Ex s2 j2 #t2. Commit(j2, s2, k) @ #t2 & not (#t2 = #t)))
-      | (Ex #x. Reveal(s) @ #x)
-      | (Ex #x. Reveal(j) @ #x)"
+              & not (Ex a2 b2 #t2. Commit(b2, a2, k) @ #t2 & not (#t2 = #t)))
+      | (Ex #x. Reveal(a) @ #x)
+      | (Ex #x. Reveal(b) @ #x)"
 
 end
