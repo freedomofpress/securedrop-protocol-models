@@ -91,7 +91,7 @@ rule Journalist_Enrollment [color=#FF7F50]:
 rule Source_Submit [derivchecks, color=#6495ED]:
   let s_pk = pk(s_sk)
       k = hkdf(~ss)
-      m = <'msg', ~msg, s_pk, sign(<'journalist', $J>, s_sk)>
+      m = <'msg', ~msg, s_pk, sign(<'journalist', ~msg, $J>, s_sk)>
       c = senc(m, k)
       ss_encap = encap(~ss, je_pk)
       me_pk = 'g'^~me_sk
@@ -123,7 +123,7 @@ rule Journalist_Recv [derivchecks, color=#6495ED]:
     , Symmetric_Encryption_IN(m, k)
     , Received($J, $S, m)
     , Eq(flag, 'msg')
-    , Eq(verify(sig_J, <'journalist', $J>, s_pk), true)]->
+    , Eq(verify(sig_J, <'journalist', msg, $J>, s_pk), true)]->
   [ Journalist_Recv($J, msg, s_pk) ]
 
 rule Journalist_Reply [color=#6495ED]:
@@ -162,7 +162,7 @@ rule Source_Recv [color=#6495ED]:
 rule Source_Reply [derivchecks, color=#6495ED]:
   let s_pk = pk(s_sk)
       k = hkdf(~ss)
-      m = <'msg', ~msg, s_pk, sign(<'journalist', $J>, s_sk)>
+      m = <'msg', ~msg, s_pk, sign(<'journalist', ~msg, $J>, s_sk)>
       c = senc(m, k)
       ss_encap = encap(~ss, je_pk)
       me_pk = 'g'^~me_sk
