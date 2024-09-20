@@ -6,10 +6,6 @@ builtins: symmetric-encryption, diffie-hellman, signing
 // KDF
 functions: hkdf/1
 
-// KEM
-functions: encap/2, decap/2
-equations: decap(encap(ss, pk(sk)), sk) = ss
-
 /*
 
 Color semantics:
@@ -37,11 +33,11 @@ rule Reveal_Newsroom_Key [color=#FF6961]:
 rule Register_Source_Encryption_Key [color=#FDFD96]:
   [ Fr(~ltk) ]
   -->
-  [ !Ltk_Source_Encryption($A, ~ltk), !Pk_Source_Encryption($A, pk(~ltk)) ]
+  [ !Ltk_Source_Encryption($A, ~ltk), !Pk_Source_Encryption($A, 'g'^~ltk) ]
 
 rule Reveal_Source_Encryption_Key [color=#FF6961]:
   [ !Ltk_Source_Encryption(A, ltk) ]
-  --[ Reveal_Source_Encryption_Key(A), Reveal_Source_Encryption_Key(pk(ltk)), Reveal_Longterm_Secret(A), Reveal(A), SomeCompromise() ]->
+  --[ Reveal_Source_Encryption_Key(A), Reveal_Source_Encryption_Key('g'^ltk), Reveal_Longterm_Secret(A), Reveal(A), SomeCompromise() ]->
   [ Out(ltk) ]
 
 rule Reveal_Source_Encryption_Public_Key [color=#FF6961]:
@@ -62,7 +58,7 @@ rule Reveal_Journalist_Signing_Key [color=#FF6961]:
 // Journalist Enrollment
 
 rule Journalist_Register_Ephemeral_Key [color=#FF7F50]:
-  let je_pk = pk(~je_sk)
+  let je_pk = 'g'^~je_sk
       sig_je_pk = sign(<'ephemeral', je_pk>, j_sk)
   in
   [ !Ltk_Journalist_Signing($J, j_sk)
@@ -74,7 +70,7 @@ rule Journalist_Register_Ephemeral_Key [color=#FF7F50]:
 
 rule Reveal_Journalist_Ephemeral_Key [color=#FF6961]:
   [ Journalist_Ephemeral_Key_Reveal(J, je_sk) ]
-  --[ Reveal_Journalist_Ephemeral_Key(J, pk(je_sk)), Reveal(J), SomeCompromise() ]->
+  --[ Reveal_Journalist_Ephemeral_Key(J, 'g'^je_sk), Reveal(J), SomeCompromise() ]->
   [ Out(je_sk) ]
 
 rule Journalist_Enrollment [color=#FF7F50]:
@@ -89,11 +85,10 @@ rule Journalist_Enrollment [color=#FF7F50]:
 // Messaging and Fetching Protocol
 
 rule Source_Submit [derivchecks, color=#6495ED]:
-  let s_pk = pk(s_sk)
-      k = hkdf(~ss)
-      m = <'msg', ~msg, s_pk, sign(<'journalist', ~msg, $J>, s_sk)>
+  let s_pk = 'g'^s_sk
+      k = je_pk^~me_sk
+      m = <'msg', ~msg, s_pk>
       c = senc(m, k)
-      ss_encap = encap(~ss, je_pk)
       me_pk = 'g'^~me_sk
   in
   [ !Ltk_Source_Encryption($S, s_sk)
@@ -109,28 +104,25 @@ rule Source_Submit [derivchecks, color=#6495ED]:
     , Source_Submission($S, $J, $NR, ~msg)
     , Source_Message_Sent($S, $J, je_pk, $NR, ~msg)
     , Sent($S, $J, m) ]->
-  [ Out(<c, me_pk, ss_encap>) ]
+  [ Out(<c, me_pk>) ]
 
 rule Journalist_Recv [derivchecks, color=#6495ED]:
-  let ss = decap(ss_encap, je_sk)
-      k = hkdf(ss)
-      m = <flag, msg, s_pk, sig_J>
+  let k = me_pk^je_sk
+      m = <flag, msg, s_pk>
   in
-  [ In(<senc(m, k), ss_encap>)
+  [ In(<senc(m, k), me_pk>)
   , Journalist_Ephemeral_Key($J, je_sk)
   , !Pk_Source_Encryption($S, s_pk) ]
   --[ Journalist_Read($J, msg)
     , Symmetric_Encryption_IN(m, k)
     , Received($J, $S, m)
-    , Eq(flag, 'msg')
-    , Eq(verify(sig_J, <'journalist', msg, $J>, s_pk), true)]->
+    , Eq(flag, 'msg') ]->
   [ Journalist_Recv($J, msg, s_pk) ]
 
 rule Journalist_Reply [color=#6495ED]:
-  let k = hkdf(~ss)
-      m = <'msg', ~msg, $J>
+  let k = s_pk^~me_sk
+      m = <'msg', ~msg>
       c = senc(m, k)
-      ss_encap = encap(~ss, s_pk)
       me_pk = 'g'^~me_sk
   in
   [ Journalist_Recv($J, msg_old, s_pk)
@@ -144,12 +136,11 @@ rule Journalist_Reply [color=#6495ED]:
     , Journalist_Message_Sent($J, s_pk, ~msg)
     , Symmetric_Encryption_OUT(m, k)
     , Sent($J, $S, m) ]->
-  [ Out(<c, me_pk, ss_encap>) ]
+  [ Out(<c, me_pk>) ]
 
 rule Source_Recv [color=#6495ED]:
-  let ss = decap(ss_encap, s_sk)
-      k = hkdf(ss)
-      m = <flag, msg, $J>
+  let k = me_pk^s_sk
+      m = <flag, msg>
   in
   [ In(<senc(m, k), me_pk, ss_encap>)
   , !Ltk_Source_Encryption($S, s_sk) ]
@@ -160,11 +151,10 @@ rule Source_Recv [color=#6495ED]:
   [ Source_Recv($S, msg, $J) ]
 
 rule Source_Reply [derivchecks, color=#6495ED]:
-  let s_pk = pk(s_sk)
-      k = hkdf(~ss)
-      m = <'msg', ~msg, s_pk, sign(<'journalist', ~msg, $J>, s_sk)>
+  let s_pk = 'g'^s_sk
+      k = je_pk^~me_sk
+      m = <'msg', ~msg, s_pk>
       c = senc(m, k)
-      ss_encap = encap(~ss, je_pk)
       me_pk = 'g'^~me_sk
   in
   [ Source_Recv($S, msg_old, $J)
@@ -181,7 +171,7 @@ rule Source_Reply [derivchecks, color=#6495ED]:
     , Source_Message_Sent($S, $J, je_pk, $NR, ~msg)
     , Source_Response($S, $J, $NR, msg_old, ~msg)
     , Sent($S, $J, m) ]->
-  [ Out(<c, me_pk, ss_encap>) ]
+  [ Out(<c, me_pk>) ]
 
 restriction Eq:
   "All t1 t2 #x. Eq(t1, t2) @ #x ==> t1 = t2"
