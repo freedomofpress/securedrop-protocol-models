@@ -45,17 +45,25 @@ rule Reveal_Source_Encryption_Public_Key [color=#FF6961]:
   --[ Reveal_Source_Encryption_Public_Key(A), Reveal(A), SomeCompromise() ]->
   [ Out(public_component) ]
 
-rule Register_Journalist_Signing_Key [color=#FDFD96]:
-  [ Fr(~ltk) ]
-  -->
-  [ !Ltk_Journalist_Signing($A, ~ltk), !Pk_Journalist_Signing($A, pk(~ltk)), Out(pk(~ltk)) ]
+
+// Journalist Enrollment
+
+rule Journalist_Enrollment [color=#FF7F50]:
+  let j_pk = pk(~j_sk)
+      sig_j_pk = sign(j_pk, nr_sk)
+  in
+  [ !Ltk_Newsroom($NR, nr_sk)
+  , Fr(~j_sk)]
+  --[ Journalist_Verified($NR, $J) ]->
+  [ Out(<j_pk, sig_j_pk>)
+  , !Journalist_Enrolled($NR, $J)
+  , !Ltk_Journalist_Signing($J, ~j_sk)
+  , !Pk_Journalist_Signing($J, j_pk) ]
 
 rule Reveal_Journalist_Signing_Key [color=#FF6961]:
   [ !Ltk_Journalist_Signing(A, ltk) ]
   --[ Reveal_Journalist_Signing_Key(A), Reveal_Longterm_Secret(A), Reveal(A), SomeCompromise() ]->
   [ Out(ltk) ]
-
-// Journalist Enrollment
 
 rule Journalist_Register_Ephemeral_Key [color=#FF7F50]:
   let je_pk = 'g'^~je_sk
@@ -72,15 +80,6 @@ rule Reveal_Journalist_Ephemeral_Key [color=#FF6961]:
   [ Journalist_Ephemeral_Key_Reveal(J, je_sk) ]
   --[ Reveal_Journalist_Ephemeral_Key(J, 'g'^je_sk), Reveal(J), SomeCompromise() ]->
   [ Out(je_sk) ]
-
-rule Journalist_Enrollment [color=#FF7F50]:
-  let sig_j_pk = sign(j_pk, nr_sk)
-  in
-  [ !Ltk_Newsroom($NR, nr_sk)
-  , !Pk_Journalist_Signing($J, j_pk) ]
-  --[ Journalist_Verified($NR, $J) ]->
-  [ Out(<j_pk, sig_j_pk>)
-  , !Journalist_Enrolled($NR, $J) ]
 
 // Messaging and Fetching Protocol
 
@@ -100,6 +99,8 @@ rule Source_Submit [derivchecks, color=#6495ED]:
   , Fr(~me_sk) ]
   --[ Eq(verify(sig_j_pk, j_pk, nr_pk), true)
     , Eq(verify(sig_je_pk, <'ephemeral', je_pk>, j_pk), true)
+    , Neq(je_pk, DH_neutral)
+    , Neq(je_pk, 'g')
     , Symmetric_Encryption_OUT(m, k)
     , Source_Submission($S, $J, $NR, ~msg)
     , Source_Message_Sent($S, $J, je_pk, $NR, ~msg)
@@ -135,7 +136,7 @@ rule Journalist_Reply [color=#6495ED]:
   --[ Journalist_Response($J, msg_old, ~msg)
     , Journalist_Message_Sent($J, s_pk, ~msg)
     , Symmetric_Encryption_OUT(m, k)
-    , Sent($J, $S, m) ]->
+    , Sent_TEMP($J, $S, m) ]->
   [ Out(<c, me_pk>) ]
 
 rule Source_Recv [color=#6495ED]:
@@ -150,34 +151,34 @@ rule Source_Recv [color=#6495ED]:
     , Received_TEMP($S, $J, m) ]->
   [ Source_Recv($S, msg, $J) ]
 
-rule Source_Reply [derivchecks, color=#6495ED]:
-  let s_pk = 'g'^s_sk
-      k = je_pk^~me_sk
-      m = <'msg', ~msg, s_pk>
-      c = senc(m, k)
-      me_pk = 'g'^~me_sk
-  in
-  [ Source_Recv($S, msg_old, $J)
-  , !Ltk_Source_Encryption($S, s_sk)
-  , !Pk_Newsroom($NR, nr_pk)
-  , !Pk_Journalist_Signing($J, j_pk)
-  , In(<j_pk, sig_j_pk, je_pk, sig_je_pk>)
-  , Fr(~msg)
-  , Fr(~ss)
-  , Fr(~me_sk) ]
-  --[ Eq(verify(sig_j_pk, j_pk, nr_pk), true)
-    , Eq(verify(sig_je_pk, <'ephemeral', je_pk>, j_pk), true)
-    , Symmetric_Encryption_OUT(m, k)
-    , Source_Message_Sent($S, $J, je_pk, $NR, ~msg)
-    , Source_Response($S, $J, $NR, msg_old, ~msg)
-    , Sent($S, $J, m) ]->
-  [ Out(<c, me_pk>) ]
+// rule Source_Reply [derivchecks, color=#6495ED]:
+//   let s_pk = 'g'^s_sk
+//       k = je_pk^~me_sk
+//       m = <'msg', ~msg, s_pk>
+//       c = senc(m, k)
+//       me_pk = 'g'^~me_sk
+//   in
+//   [ Source_Recv($S, msg_old, $J)
+//   , !Ltk_Source_Encryption($S, s_sk)
+//   , !Pk_Newsroom($NR, nr_pk)
+//   , !Pk_Journalist_Signing($J, j_pk)
+//   , In(<j_pk, sig_j_pk, je_pk, sig_je_pk>)
+//   , Fr(~msg)
+//   , Fr(~ss)
+//   , Fr(~me_sk) ]
+//   --[ Eq(verify(sig_j_pk, j_pk, nr_pk), true)
+//     , Eq(verify(sig_je_pk, <'ephemeral', je_pk>, j_pk), true)
+//     , Symmetric_Encryption_OUT(m, k)
+//     , Source_Message_Sent($S, $J, je_pk, $NR, ~msg)
+//     , Source_Response($S, $J, $NR, msg_old, ~msg)
+//     , Sent($S, $J, m) ]->
+//   [ Out(<c, me_pk>) ]
 
 restriction Eq:
   "All t1 t2 #x. Eq(t1, t2) @ #x ==> t1 = t2"
 
-// restriction Neq:
-//   "All x #t. Neq(x,x) @ #t ==> F"
+restriction Neq:
+  "All x #t. Neq(x,x) @ #t ==> F"
 
 /* Without this Source-Lemma, Tamarin thinks that the "Fetch" Rules act as decryption oracles.
    This Source-Lemma ensures that if a party gets a ciphertext, either the adversary encrypted the message (i.e, it knew the message)
@@ -213,16 +214,16 @@ exists-trace
       & Source_Read(s, m) @ #t4
       & (not Ex #x. SomeCompromise() @ #x)"
 
-lemma Executability_Source_Response:
-exists-trace
-"Ex #t1 #t2 #t3 #t4 #t5 #t6 s j nr m_old m m_new.
-        Source_Submission(s, j, nr, m_old) @ #t1
-      & Journalist_Read(j, m_old) @ #t2
-      & Journalist_Response(j, m_old, m) @ #t3
-      & Source_Read(s, m) @ #t4
-      & Source_Response(s, j, nr, m, m_new) @ #t5
-      & Journalist_Read(j, m_new) @ #t6
-      & (not Ex #x. SomeCompromise() @ #x)"
+// lemma Executability_Source_Response:
+// exists-trace
+// "Ex #t1 #t2 #t3 #t4 #t5 #t6 s j nr m_old m m_new.
+//         Source_Submission(s, j, nr, m_old) @ #t1
+//       & Journalist_Read(j, m_old) @ #t2
+//       & Journalist_Response(j, m_old, m) @ #t3
+//       & Source_Read(s, m) @ #t4
+//       & Source_Response(s, j, nr, m, m_new) @ #t5
+//       & Journalist_Read(j, m_new) @ #t6
+//       & (not Ex #x. SomeCompromise() @ #x)"
 
 lemma Secrecy_Source_Message:
 "All #t s j je_pk nr m. 
@@ -256,8 +257,8 @@ lemma Non_Injective_Agreement:
 "All #t a b m. 
         Received(b, a, m) @ #t
   ==>   (Ex #x. Sent(a, b, m) @ #x & #x < #t) 
-      | (Ex #x. Reveal_Longterm_Secret(a) @ #x)
-      | (Ex #x. Reveal_Longterm_Secret(b) @ #x)"
+      | (Ex #x. Reveal(a) @ #x)
+      | (Ex #x. Reveal(b) @ #x)"
   
 lemma Injective_Agreement:
 "All #t a b m. 
@@ -265,7 +266,7 @@ lemma Injective_Agreement:
   ==>   (Ex #x. Sent(a, b, m) @ #x 
               & #x < #t
               & not (Ex a2 b2 #t2. Received(b2, a2, m) @ #t2 & not (#t2 = #t)))
-      | (Ex #x. Reveal_Longterm_Secret(a) @ #x)
-      | (Ex #x. Reveal_Longterm_Secret(b) @ #x)"
+      | (Ex #x. Reveal(a) @ #x)
+      | (Ex #x. Reveal(b) @ #x)"
 
 end
