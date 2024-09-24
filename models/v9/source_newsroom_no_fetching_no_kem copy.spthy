@@ -86,10 +86,10 @@ rule Reveal_Journalist_Ephemeral_Key [color=#FF6961]:
 
 rule Source_Submit [derivchecks, color=#6495ED]:
   let s_pk = 'g'^s_sk
-      k = je_pk^~me_sk
-      m = <'msg', ~msg, s_pk>
+      k = (je_pk^~me_sk)^s_sk
+      m = <'msg', ~msg, ~me_sk, s_pk>
       c = senc(m, k)
-      me_pk = 'g'^~me_sk
+      me_pk = ('g'^~me_sk)^s_sk
   in
   [ !Ltk_Source_Encryption($S, s_sk)
   , !Pk_Newsroom($NR, nr_pk)
@@ -100,8 +100,9 @@ rule Source_Submit [derivchecks, color=#6495ED]:
   , Fr(~me_sk) ]
   --[ Eq(verify(sig_j_pk, j_pk, nr_pk), true)
     , Eq(verify(sig_je_pk, <'ephemeral', je_pk>, j_pk), true)
-    , Neq(je_pk, DH_neutral)
-    , Neq(je_pk, 'g')
+    , DHElement_Check(je_pk)
+    , DHElement_Check(k)
+    , DHElement_Check(me_pk)
     , Symmetric_Encryption_OUT(m, k)
     , Source_Submission($S, $J, $NR, ~msg)
     , Source_Message_Sent($S, $J, je_pk, $NR, ~msg)
@@ -110,7 +111,7 @@ rule Source_Submit [derivchecks, color=#6495ED]:
 
 rule Journalist_Recv [derivchecks, color=#6495ED]:
   let k = me_pk^je_sk
-      m = <flag, msg, s_pk>
+      m = <flag, msg, me_sk, s_pk>
   in
   [ In(<senc(m, k), me_pk>)
   , Journalist_Ephemeral_Key($J, je_sk)
@@ -119,7 +120,11 @@ rule Journalist_Recv [derivchecks, color=#6495ED]:
   --[ Journalist_Read($J, msg)
     , Symmetric_Encryption_IN(m, k)
     , Received($NR, $S, $J, m)
-    , Eq(flag, 'msg') ]->
+    , DHElement_Check(me_pk)
+    , DHElement_Check(s_pk)
+    , DHElement_Check(k)
+    , Eq(flag, 'msg')
+    , Eq(me_pk, s_pk^me_sk) ]->
   [ Journalist_Recv($J, msg, s_pk) ]
 
 rule Journalist_Reply [color=#6495ED]:
@@ -179,8 +184,8 @@ rule Source_Recv [color=#6495ED]:
 restriction Eq:
   "All t1 t2 #x. Eq(t1, t2) @ #x ==> t1 = t2"
 
-restriction Neq:
-  "All x #t. Neq(x,x) @ #t ==> F"
+restriction DHElement_Check:
+  "All x #t. DHElement_Check(x) @ #t ==> not(x = 'g' | x = DH_neutral)"
 
 restriction OnlyOnce:
   "All x #i #j. OnlyOnce(x)@#i & OnlyOnce(x)@#j ==> #i = #j"
