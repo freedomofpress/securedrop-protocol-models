@@ -42,7 +42,7 @@ rule Reveal_Source_Encryption_Key [color=#FF6961]:
 
 rule Reveal_Source_Encryption_Public_Key [color=#FF6961]:
   [ !Pk_Source_Encryption(A, public_component) ]
-  --[ Reveal_Source_Encryption_Public_Key(A), Reveal(A), SomeCompromise() ]->
+  --[ Reveal_Source_Encryption_Public_Key(A), Reveal_Source_Encryption_Public_Key(public_component), Reveal(A), SomeCompromise() ]->
   [ Out(public_component) ]
 
 
@@ -87,7 +87,7 @@ rule Reveal_Journalist_Ephemeral_Key [color=#FF6961]:
 rule Source_Submit [derivchecks, color=#6495ED]:
   let s_pk = 'g'^s_sk
       k = (je_pk^~me_sk)^s_sk
-      m = <'msg', ~msg, ~me_sk, s_pk>
+      m = <'msg', ~msg, ~me_sk, s_pk, $NR>
       c = senc(m, k)
       me_pk = ('g'^~me_sk)^s_sk
   in
@@ -98,34 +98,36 @@ rule Source_Submit [derivchecks, color=#6495ED]:
   , Fr(~msg)
   , Fr(~ss)
   , Fr(~me_sk) ]
-  --[ Eq(verify(sig_j_pk, j_pk, nr_pk), true)
+  --[ // check signatures of journalist's longterm signature and ephemeral encryption keys
+      Eq(verify(sig_j_pk, j_pk, nr_pk), true)
     , Eq(verify(sig_je_pk, <'ephemeral', je_pk>, j_pk), true)
+      // sanity check of DH elements used
     , DHElement_Check(je_pk)
     , DHElement_Check(k)
     , DHElement_Check(me_pk)
+      // Actions for Lemmas
     , Symmetric_Encryption_OUT(m, k)
-    , Source_Submission($S, $J, $NR, ~msg)
-    , Source_Message_Sent($S, $J, je_pk, $NR, ~msg)
-    , Sent($S, $NR, m) ]->
+    , Source_Sent(s_pk, $J, je_pk, $NR, m)
+    ]->
   [ Out(<c, me_pk>) ]
 
 rule Journalist_Recv [derivchecks, color=#6495ED]:
   let k = me_pk^je_sk
-      m = <flag, msg, me_sk, s_pk>
+      m = <'msg', msg, me_sk, s_pk, $NR>
+      je_pk = 'g'^je_sk
   in
   [ In(<senc(m, k), me_pk>)
   , Journalist_Ephemeral_Key($J, je_sk)
-  , !Pk_Source_Encryption($S, s_pk) 
   , !Journalist_Enrolled($NR, $J)]
-  --[ Journalist_Read($J, msg)
-    , Symmetric_Encryption_IN(m, k)
-    , Received($NR, $S, $J, m)
+  --[ Eq(me_pk, s_pk^me_sk) // check that public key is the one used for encryption
     , DHElement_Check(me_pk)
     , DHElement_Check(s_pk)
     , DHElement_Check(k)
-    , Eq(flag, 'msg')
-    , Eq(me_pk, s_pk^me_sk) ]->
-  [ Journalist_Recv($J, msg, s_pk) ]
+      // Actions for Lemmas
+    , Symmetric_Encryption_IN(m, k)
+    , Journalist_Received($J, je_pk, $NR, s_pk, m)
+    ]->
+  [ Journalist_Recv($J, $NR, s_pk, msg) ]
 
 rule Journalist_Reply [color=#6495ED]:
   let k = s_pk^~me_sk
@@ -133,29 +135,28 @@ rule Journalist_Reply [color=#6495ED]:
       c = senc(m, k)
       me_pk = 'g'^~me_sk
   in
-  [ Journalist_Recv($J, msg_old, s_pk)
-  , !Ltk_Journalist_Signing($J, j_sk)
-  , !Pk_Source_Encryption($S, s_pk)
+  [ Journalist_Recv($J, $NR, s_pk, msg_old)
   , Fr(~msg)
   , Fr(~me_sk)
   , Fr(~je_sk)
   , Fr(~ss) ]
-  --[ Journalist_Response($J, msg_old, ~msg)
-    , Journalist_Message_Sent($J, s_pk, ~msg)
-    , Symmetric_Encryption_OUT(m, k)
-    , Sent_TEMP($J, $S, m) ]->
+  --[ // Actions for Lemmas
+      Symmetric_Encryption_OUT(m, k)
+    , Journalist_Sent($J, $NR, s_pk, m)
+    ]->
   [ Out(<c, me_pk>) ]
 
 rule Source_Recv [color=#6495ED]:
   let k = me_pk^s_sk
-      m = <flag, msg>
+      m = <'msg', msg>
+      s_pk = 'g'^s_sk
   in
-  [ In(<senc(m, k), me_pk, ss_encap>)
+  [ In(<senc(m, k), me_pk>)
   , !Ltk_Source_Encryption($S, s_sk) ]
-  --[ Source_Read($S, msg)
-    , Symmetric_Encryption_IN(m, k)
-    , Eq(flag, 'msg')
-    , Received_TEMP($S, $J, m) ]->
+  --[ // Actions for Lemmas
+      Symmetric_Encryption_IN(m, k)
+    , Source_Recieved(s_pk, m)
+    ]->
   [ Source_Recv($S, msg, $J) ]
 
 // rule Source_Reply [derivchecks, color=#6495ED]:
@@ -201,27 +202,18 @@ lemma Symmetric_Encryption [sources]:
         & (Ex #x. KU(key) @ #x & #x < #t))
       | (Ex #x. Symmetric_Encryption_OUT(m, key) @ #x & #x < #t)"
 
-// lemma Verified_Journalist [reuse]:
-// "All #t1 #t2 s nr j m. 
-//         Source_Submission(s, j, nr, m) @ #t1
-//       & Journalist_Read(j, m) @ #t2
-//   ==>   (Ex #x. Journalist_Verified(nr, j) @ #x)
-//       | (Ex #x. SomeCompromise() @ #x)"
-
 lemma Executability_Submission:
 exists-trace
-"Ex #t1 #t2 s j nr m.
-        Source_Submission(s, j, nr, m) @ #t1
-      & Journalist_Read(j, m) @ #t2
+"Ex #t1 #t2 s_pk j je_pk nr m.
+        Source_Sent(s_pk, j, je_pk, nr, m) @ #t1
+      & Journalist_Received(j, je_pk, nr, s_pk, m) @ #t2
       & (not Ex #x. SomeCompromise() @ #x)"
 
 lemma Executability_Journalist_Response:
 exists-trace
-"Ex #t1 #t2 #t3 #t4 s j nr m_old m.
-        Source_Submission(s, j, nr, m_old) @ #t1
-      & Journalist_Read(j, m_old) @ #t2
-      & Journalist_Response(j, m_old, m) @ #t3
-      & Source_Read(s, m) @ #t4
+"Ex #t1 #t2 s_pk j nr m.
+        Journalist_Sent(j, nr, s_pk, m) @ #t1
+      & Source_Recieved(s_pk, m) @ #t2
       & (not Ex #x. SomeCompromise() @ #x)"
 
 // lemma Executability_Source_Response:
@@ -237,7 +229,7 @@ exists-trace
 
 lemma Secrecy_Source_Message:
 "All #t s j je_pk nr m. 
-        Source_Message_Sent(s, j, je_pk, nr, m) @ #t
+        Source_Sent(s, j, je_pk, nr, m) @ #t
   ==>   (not Ex #x. K(m) @ #x)
       | (Ex #x. Reveal_Journalist_Signing_Key(j) @ #x)
       | (Ex #x. Reveal_Journalist_Ephemeral_Key(j, je_pk) @ #x)
@@ -245,39 +237,36 @@ lemma Secrecy_Source_Message:
 
 lemma PFS_Source_Message:
 "All #t s j je_pk nr m. 
-        Source_Message_Sent(s, j, je_pk, nr, m) @ #t
+        Source_Sent(s, j, je_pk, nr, m) @ #t
   ==>   (not Ex #x. K(m) @ #x)
       | (Ex #x. Reveal_Journalist_Signing_Key(j) @ #x & #x < #t)
       | (Ex #x. Reveal_Journalist_Ephemeral_Key(j, je_pk) @ #x)
       | (Ex #x. Reveal_Newsroom_Key(nr) @ #x & #x < #t)"
 
 lemma Secrecy_Journalist_Message:
-"All #t j s m. 
-        Journalist_Message_Sent(j, s, m) @ #t
+"All #t j nr s m. 
+        Journalist_Sent(j, nr, s, m) @ #t
   ==>   (not Ex #x. K(m) @ #x)
       | (Ex #x. Reveal_Source_Encryption_Key(s) @ #x)"
 
 lemma PFS_Journalist_Message:
-"All #t j s m. 
-        Journalist_Message_Sent(j, s, m) @ #t
+"All #t j nr s m. 
+        Journalist_Sent(j, nr, s, m) @ #t
   ==>   (not Ex #x. K(m) @ #x)
       | (Ex #x. Reveal_Source_Encryption_Key(s) @ #x & #x < #t)"
 
-lemma Non_Injective_Agreement:
-"All #t a b c m. 
-        Received(b, a, c, m) @ #t
-  ==>   (Ex #x. Sent(a, b, m) @ #x & #x < #t) 
-      | (Ex #x. Reveal(a) @ #x)
-      | (Ex #x. Reveal(b) @ #x)
-      | (Ex #x. Reveal(c) @ #x)"
+lemma Non_Injective_Agreement_Source_Message:
+"All #t j je_pk_1 nr s_pk m. 
+        Journalist_Received(j, je_pk_1, nr, s_pk, m) @ #t
+  ==>   (Ex #x je_pk_2. Source_Sent(s_pk, j, je_pk_2, nr, m) @ #x & #x < #t) 
+      | (Ex #x. Reveal_Source_Encryption_Key(s_pk) @ #x)"
   
-// lemma Injective_Agreement:
-// "All #t a b m. 
-//         Received(b, a, m) @ #t
-//   ==>   (Ex #x. Sent(a, b, m) @ #x 
+// lemma Injective_Agreement_Source_Message:
+// "All #t j je_pk_1 nr s_pk m. 
+//         Journalist_Received(j, je_pk_1, nr, s_pk, m) @ #t
+//   ==>   (Ex #x je_pk_2. Source_Sent(s_pk, j, je_pk_2, nr, m) @ #x 
 //               & #x < #t
-//               & not (Ex a2 b2 #t2. Received(b2, a2, m) @ #t2 & not (#t2 = #t)))
-//       | (Ex #x. Reveal(a) @ #x)
-//       | (Ex #x. Reveal(b) @ #x)"
+//               & not (Ex j_2 je_pk_3 nr_2 s_pk_2 #t2. Journalist_Received(j_2, je_pk_3, nr_2, s_pk_2, m) @ #t2 & not (#t2 = #t)))
+//       | (Ex #x. Reveal_Source_Encryption_Key(s_pk) @ #x)"
 
 end
