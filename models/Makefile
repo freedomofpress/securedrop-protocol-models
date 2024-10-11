@@ -10,8 +10,8 @@ run:
 
 # run for different model on local machine with:
 # make run DIR="path/to/model/"
-run:
-	@tamarin +RTS -N$(N_THREADS) -RTS interactive "$(DIR)" --port=$(PORT)
+run_local:
+	@tamarin-prover +RTS -N$(N_THREADS) -RTS interactive "$(DIR)"
 
 # runs the tamarin-prover with the "auto-sources" flag which tries to automatically generate source lemmas
 # to remove partial deconstructions
