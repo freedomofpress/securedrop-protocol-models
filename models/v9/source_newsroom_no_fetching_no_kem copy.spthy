@@ -259,14 +259,18 @@ lemma Non_Injective_Agreement_Source_Message:
 "All #t j je_pk_1 nr s_pk m. 
         Journalist_Received(j, je_pk_1, nr, s_pk, m) @ #t
   ==>   (Ex #x je_pk_2. Source_Sent(s_pk, j, je_pk_2, nr, m) @ #x & #x < #t) 
-      | (Ex #x. Reveal_Source_Encryption_Key(s_pk) @ #x)"
+      | (Ex #x. Reveal_Source_Encryption_Key(s_pk) @ #x)
+      | (Ex #x. Reveal(j) @ #x)
+      | (Ex #x. Reveal(nr) @ #x)"
   
-// lemma Injective_Agreement_Source_Message:
-// "All #t j je_pk_1 nr s_pk m. 
-//         Journalist_Received(j, je_pk_1, nr, s_pk, m) @ #t
-//   ==>   (Ex #x je_pk_2. Source_Sent(s_pk, j, je_pk_2, nr, m) @ #x 
-//               & #x < #t
-//               & not (Ex j_2 je_pk_3 nr_2 s_pk_2 #t2. Journalist_Received(j_2, je_pk_3, nr_2, s_pk_2, m) @ #t2 & not (#t2 = #t)))
-//       | (Ex #x. Reveal_Source_Encryption_Key(s_pk) @ #x)"
+lemma Injective_Agreement_Source_Message:
+"All #t j je_pk_1 nr s_pk m. 
+        Journalist_Received(j, je_pk_1, nr, s_pk, m) @ #t
+  ==>   (Ex #x je_pk_2. Source_Sent(s_pk, j, je_pk_2, nr, m) @ #x 
+              & #x < #t
+              & not (Ex j_2 je_pk_3 nr_2 s_pk_2 #t2. Journalist_Received(j_2, je_pk_3, nr_2, s_pk_2, m) @ #t2 & not (#t2 = #t)))
+      | (Ex #x. Reveal_Source_Encryption_Key(s_pk) @ #x)
+      | (Ex #x. Reveal(j) @ #x)
+      | (Ex #x. Reveal(nr) @ #x)"
 
 end
