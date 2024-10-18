@@ -1,7 +1,7 @@
 theory SecureDrop
 begin
 
-builtins: symmetric-encryption, diffie-hellman
+builtins: symmetric-encryption, diffie-hellman, signing
 
 // KDF
 functions: hkdf/1
@@ -21,29 +21,37 @@ Color semantics:
 // Key Registration
 
 rule Register_Newsroom_Key [color=#FDFD96]:
+  let public_key = pk(~ltk) in
   [ Fr(~ltk) ]
   -->
-  [ !Ltk_Newsroom($A, ~ltk), !Pk_Newsroom($A, pk(~ltk)), Out(pk(~ltk)) ]
+  [ !Ltk_Newsroom($A, ~ltk)
+  , !Pk_Newsroom($A, public_key)
+  , Out(public_key) ]
 
 rule Reveal_Newsroom_Key [color=#FF6961]:
   [ !Ltk_Newsroom(A, ltk) ]
-  --[ Reveal_Newsroom_Key(A), Reveal(A), SomeCompromise() ]->
+  --[ Reveal_Newsroom_Key(A)
+    , Reveal(A)
+    , SomeCompromise() ]->
   [ Out(ltk) ]
 
 rule Register_Source_Encryption_Key [color=#FDFD96]:
+  let public_key = 'g'^~ltk in
   [ Fr(~ltk) ]
-  -->
-  [ !Ltk_Source_Encryption($A, ~ltk), !Pk_Source_Encryption($A, 'g'^~ltk) ]
+  --[ Register_Source(public_key) ]->
+  [ !Ltk_Source_Encryption($A, ~ltk)
+  , !Pk_Source_Encryption($A, public_key)
+  , Out(public_key) ]
 
 rule Reveal_Source_Encryption_Key [color=#FF6961]:
+  let public_key = 'g'^ltk in
   [ !Ltk_Source_Encryption(A, ltk) ]
-  --[ Reveal_Source_Encryption_Key(A), Reveal_Source_Encryption_Key('g'^ltk), Reveal_Longterm_Secret(A), Reveal(A), SomeCompromise() ]->
+  --[ Reveal_Source_Encryption_Key(A)
+    , Reveal_Source_Encryption_Key(public_key)
+    , Reveal_Longterm_Secret(A)
+    , Reveal(A)
+    , SomeCompromise() ]->
   [ Out(ltk) ]
-
-rule Reveal_Source_Encryption_Public_Key [color=#FF6961]:
-  [ !Pk_Source_Encryption(A, public_component) ]
-  --[ Reveal_Source_Encryption_Public_Key(A), Reveal_Source_Encryption_Public_Key(public_component), Reveal(A), SomeCompromise() ]->
-  [ Out(public_component) ]
 
 
 // Journalist Enrollment
@@ -79,7 +87,9 @@ rule Journalist_Register_Ephemeral_Key [color=#FF7F50]:
 
 rule Reveal_Journalist_Ephemeral_Key [color=#FF6961]:
   [ Journalist_Ephemeral_Key_Reveal(J, je_sk) ]
-  --[ Reveal_Journalist_Ephemeral_Key(J, 'g'^je_sk), Reveal(J), SomeCompromise() ]->
+  --[ Reveal_Journalist_Ephemeral_Key(J, 'g'^je_sk)
+    , Reveal(J)
+    , SomeCompromise() ]->
   [ Out(je_sk) ]
 
 // Messaging and Fetching Protocol
@@ -155,7 +165,7 @@ rule Source_Recv [color=#6495ED]:
   , !Ltk_Source_Encryption($S, s_sk) ]
   --[ // Actions for Lemmas
       Symmetric_Encryption_IN(m, k)
-    , Source_Recieved(s_pk, m)
+    , Source_Received(s_pk, m)
     ]->
   [ Source_Recv($S, msg, $J) ]
 
@@ -211,9 +221,10 @@ exists-trace
 
 lemma Executability_Journalist_Response:
 exists-trace
-"Ex #t1 #t2 s_pk j nr m.
+"Ex #t1 #t2 #t3 s_pk j nr m.
         Journalist_Sent(j, nr, s_pk, m) @ #t1
-      & Source_Recieved(s_pk, m) @ #t2
+      & Source_Received(s_pk, m) @ #t2
+      & Register_Source(s_pk) @ #t3
       & (not Ex #x. SomeCompromise() @ #x)"
 
 // lemma Executability_Source_Response:
@@ -232,43 +243,47 @@ lemma Secrecy_Source_Message:
         Source_Sent(s, j, je_pk, nr, m) @ #t
   ==>   (not Ex #x. K(m) @ #x)
       | (Ex #x. Reveal_Journalist_Signing_Key(j) @ #x)
-      | (Ex #x. Reveal_Journalist_Ephemeral_Key(j, je_pk) @ #x)
-      | (Ex #x. Reveal_Newsroom_Key(nr) @ #x)"
+      | (Ex #x. Reveal_Newsroom_Key(nr) @ #x)
+      | (Ex #x. Reveal_Journalist_Ephemeral_Key(j, je_pk) @ #x)"
 
 lemma PFS_Source_Message:
 "All #t s j je_pk nr m. 
         Source_Sent(s, j, je_pk, nr, m) @ #t
   ==>   (not Ex #x. K(m) @ #x)
       | (Ex #x. Reveal_Journalist_Signing_Key(j) @ #x & #x < #t)
-      | (Ex #x. Reveal_Journalist_Ephemeral_Key(j, je_pk) @ #x)
-      | (Ex #x. Reveal_Newsroom_Key(nr) @ #x & #x < #t)"
+      | (Ex #x. Reveal_Newsroom_Key(nr) @ #x & #x < #t)
+      | (Ex #x. Reveal_Journalist_Ephemeral_Key(j, je_pk) @ #x)"
 
 lemma Secrecy_Journalist_Message:
-"All #t j nr s m. 
-        Journalist_Sent(j, nr, s, m) @ #t
+"All #t1 #t2 j nr s_pk m. 
+        Journalist_Sent(j, nr, s_pk, m) @ #t1
+      & Register_Source(s_pk) @ #t2
   ==>   (not Ex #x. K(m) @ #x)
-      | (Ex #x. Reveal_Source_Encryption_Key(s) @ #x)"
+      | (Ex #x. Reveal_Source_Encryption_Key(s_pk) @ #x)"
 
 lemma PFS_Journalist_Message:
-"All #t j nr s m. 
-        Journalist_Sent(j, nr, s, m) @ #t
+"All #t1 #t2 j nr s_pk m. 
+        Journalist_Sent(j, nr, s_pk, m) @ #t1
+      & Register_Source(s_pk) @ #t2
   ==>   (not Ex #x. K(m) @ #x)
-      | (Ex #x. Reveal_Source_Encryption_Key(s) @ #x & #x < #t)"
+      | (Ex #x. Reveal_Source_Encryption_Key(s_pk) @ #x & #x < #t1)"
 
 lemma Non_Injective_Agreement_Source_Message:
-"All #t j je_pk_1 nr s_pk m. 
-        Journalist_Received(j, je_pk_1, nr, s_pk, m) @ #t
-  ==>   (Ex #x je_pk_2. Source_Sent(s_pk, j, je_pk_2, nr, m) @ #x & #x < #t) 
+"All #t1 #t2 j je_pk_1 nr s_pk m. 
+        Journalist_Received(j, je_pk_1, nr, s_pk, m) @ #t1
+      & Register_Source(s_pk) @ #t2
+  ==>   (Ex #x je_pk_2. Source_Sent(s_pk, j, je_pk_2, nr, m) @ #x & #x < #t1) 
       | (Ex #x. Reveal_Source_Encryption_Key(s_pk) @ #x)
       | (Ex #x. Reveal(j) @ #x)
       | (Ex #x. Reveal(nr) @ #x)"
   
 lemma Injective_Agreement_Source_Message:
-"All #t j je_pk_1 nr s_pk m. 
-        Journalist_Received(j, je_pk_1, nr, s_pk, m) @ #t
-  ==>   (Ex #x je_pk_2. Source_Sent(s_pk, j, je_pk_2, nr, m) @ #x 
-              & #x < #t
-              & not (Ex j_2 je_pk_3 nr_2 s_pk_2 #t2. Journalist_Received(j_2, je_pk_3, nr_2, s_pk_2, m) @ #t2 & not (#t2 = #t)))
+"All #t1 #t2 j je_pk_1 nr s_pk m. 
+        Journalist_Received(j, je_pk_1, nr, s_pk, m) @ #t1
+      & Register_Source(s_pk) @ #t2
+  ==>   (Ex #x1 je_pk_2. Source_Sent(s_pk, j, je_pk_2, nr, m) @ #x1 
+              & #x1 < #t1
+              & not (Ex j_2 je_pk_3 nr_2 s_pk_2 #x2. Journalist_Received(j_2, je_pk_3, nr_2, s_pk_2, m) @ #x2 & not (#x2 = #t1)))
       | (Ex #x. Reveal_Source_Encryption_Key(s_pk) @ #x)
       | (Ex #x. Reveal(j) @ #x)
       | (Ex #x. Reveal(nr) @ #x)"

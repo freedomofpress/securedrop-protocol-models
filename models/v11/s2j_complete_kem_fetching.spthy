@@ -44,25 +44,48 @@ rule Reveal_Source_Encryption_Key [color=#FF6961]:
   --[ Reveal_Source_Encryption_Key(A), Reveal_Source_Encryption_Key(public_key), Reveal_Longterm_Secret(A), Reveal(A), SomeCompromise() ]->
   [ Out(ltk) ]
 
+rule Register_Source_Fetching_Key [color=#FDFD96]:
+  let public_key = 'g'^~ltk
+  in
+  [ Fr(~ltk) ]
+  -->
+  [ !Ltk_Source_Fetching($A, ~ltk), !Pk_Source_Fetching($A, public_key), Out(public_key) ]
+
+rule Reveal_Source_Fetching_Key [color=#FF6961]:
+  let public_key = pk(ltk) 
+  in
+  [ !Ltk_Source_Fetching(A, ltk) ]
+  --[ Reveal_Source_Fetching_Key(A), Reveal_Source_Fetching_Key(public_key), Reveal_Longterm_Secret(A), Reveal(A), SomeCompromise() ]->
+  [ Out(ltk) ]
 
 // Journalist Enrollment
 
 rule Journalist_Enrollment [color=#FF7F50]:
   let j_pk = pk(~j_sk)
-      sig_j_pk = sign(j_pk, nr_sk)
+      sig_j_pk = sign(<'j_pk', j_pk>, nr_sk)
+      jc_pk = 'g'^~jc_sk
+      sig_jc_pk = sign(<'jc_pk', jc_pk>, nr_sk)
   in
   [ !Ltk_Newsroom($NR, nr_sk)
-  , Fr(~j_sk)]
+  , Fr(~j_sk)
+  , Fr(~jc_sk)]
   --[ Journalist_Verified($NR, $J)
     , OnlyOnce($J) ]->
-  [ Out(<j_pk, sig_j_pk>)
+  [ Out(<j_pk, sig_j_pk, jc_pk, sig_jc_pk>)
   , !Journalist_Enrolled($NR, $J)
   , !Ltk_Journalist_Signing($J, ~j_sk)
-  , !Pk_Journalist_Signing($J, j_pk) ]
+  , !Pk_Journalist_Signing($J, j_pk)
+  , !Ltk_Journalist_Fetching($J, ~jc_sk)
+  , !Pk_Journalist_Fetching($J, jc_pk) ]
 
 rule Reveal_Journalist_Signing_Key [color=#FF6961]:
   [ !Ltk_Journalist_Signing(A, ltk) ]
   --[ Reveal_Journalist_Signing_Key(A), Reveal_Longterm_Secret(A), Reveal(A), SomeCompromise() ]->
+  [ Out(ltk) ]
+
+rule Reveal_Journalist_Fetching_Key [color=#FF6961]:
+  [ !Ltk_Journalist_Fetching(A, ltk) ]
+  --[ Reveal_Journalist_Fetching_Key(A), Reveal_Longterm_Secret(A), Reveal(A), SomeCompromise() ]->
   [ Out(ltk) ]
 
 rule Journalist_Register_Ephemeral_Key [color=#FF7F50]:
@@ -88,40 +111,56 @@ rule Reveal_Journalist_Ephemeral_Key [color=#FF6961]:
 
 rule Source_Submit [derivchecks, color=#6495ED]:
   let s_pk = pk(s_sk)
+      sc_pk = 'g'^sc_sk
       k = hkdf(~ss)
-      m = <'msg', ~msg, s_pk>
+      m = <'msg', ~msg, s_pk, sc_pk>
       c = senc(m, k)
       ss_encap = aenc(~ss, je_pk)
+      me_pk = 'g'^~me_sk
+      m_gdh = jc_pk^~me_sk
   in
   [ !Ltk_Source_Encryption($S, s_sk)
+  , !Ltk_Source_Fetching($S, sc_sk)
   , !Pk_Newsroom($NR, nr_pk)
   , !Pk_Journalist_Signing($J, j_pk)
-  , In(<j_pk, sig_j_pk, je_pk, sig_je_pk>)
+  , In(<j_pk, sig_j_pk, jc_pk, sig_jc_pk, je_pk, sig_je_pk>)
   , Fr(~msg)
-  , Fr(~ss) ]
+  , Fr(~ss)
+  , Fr(~me_sk) ]
   --[ // check signatures of journalist's longterm signature and ephemeral encryption keys
-      Eq(verify(sig_j_pk, j_pk, nr_pk), true)
+      Eq(verify(sig_j_pk, <'j_pk', j_pk>, nr_pk), true)
+    , Eq(verify(sig_jc_pk, <'jc_pk', jc_pk>, nr_pk), true)
     , Eq(verify(sig_je_pk, <'ephemeral', je_pk>, j_pk), true)
       // Actions for Lemmas
     , Symmetric_Encryption_OUT(m, k)
     , Source_Sent(s_pk, $J, je_pk, $NR, m)
     ]->
-  [ Out(<c, ss_encap>) ]
+  [ Out(<c, ss_encap, me_pk, m_gdh>) ]
+
+rule Journalist_Fetch [color=#B4D9EF]:
+  let kmid = pmgdh^jc_sk
+      m = <'m_id', m_id>
+  in
+  [ In(<pmgdh, senc(m, kmid)>)
+  , !Ltk_Journalist_Fetching($J, jc_sk) ]
+  --[ Symmetric_Encryption_Adversary(m, kmid) ]->
+  [ Journalist_Fetched($J, m_id) ]
 
 rule Journalist_Recv [derivchecks, color=#6495ED]:
   let ss = adec(ss_encap, je_sk)
       k = hkdf(ss)
-      m = <'msg', msg, s_pk>
+      m = <'msg', msg, s_pk, sc_pk>
       je_pk = pk(je_sk)
   in
   [ In(<senc(m, k), ss_encap>)
   , Journalist_Ephemeral_Key($J, je_sk)
+  , Journalist_Fetched($J, m_id)
   , !Journalist_Enrolled($NR, $J)]
   --[ // Actions for Lemmas
       Symmetric_Encryption_IN(m, k)
     , Journalist_Received($J, je_pk, $NR, s_pk, m)
     ]->
-  [ Journalist_Recv($J, $NR, s_pk, msg) ]
+  [ Journalist_Recv($J, $NR, s_pk, sc_pk, msg) ]
 
 rule Journalist_Reply [color=#6495ED]:
   let k = hkdf(~ss)
@@ -129,16 +168,28 @@ rule Journalist_Reply [color=#6495ED]:
       m = <'msg', ~msg, $J>
       c = senc(m, k)
       ss_encap = aenc(~ss, s_pk)
+      me_pk = 'g'^~me_sk
+      m_gdh = sc_pk^~me_sk
   in
-  [ Journalist_Recv($J, $NR, s_pk, msg_old)
+  [ Journalist_Recv($J, $NR, s_pk, sc_pk, msg_old)
   , Journalist_Ephemeral_Key($J, je_sk)
   , Fr(~msg)
-  , Fr(~ss) ]
+  , Fr(~ss)
+  , Fr(~me_sk) ]
   --[ // Actions for Lemmas
       Symmetric_Encryption_OUT(m, k)
     , Journalist_Sent($J, $NR, s_pk, m)
     ]->
-  [ Out(<c, ss_encap>) ]
+  [ Out(<c, ss_encap, me_pk, m_gdh>) ]
+
+rule Source_Fetch [color=#B4D9EF]:
+  let kmid = pmgdh^sc_sk
+      m = <'m_id', m_id>
+  in
+  [ In(<pmgdh, senc(m, kmid)>)
+  , !Ltk_Source_Fetching($J, sc_sk) ]
+  --[ Symmetric_Encryption_Adversary(m, kmid) ]->
+  [ Source_Fetched($S, m_id) ]
 
 rule Source_Recv [color=#6495ED]:
   let ss = adec(ss_encap, s_sk)
@@ -147,6 +198,7 @@ rule Source_Recv [color=#6495ED]:
       s_pk = pk(s_sk)
   in
   [ In(<senc(m, k), ss_encap>)
+  , Source_Fetched($S, m_id)
   , !Ltk_Source_Encryption($S, s_sk) ]
   --[ // Actions for Lemmas
       Symmetric_Encryption_IN(m, k)
@@ -206,9 +258,10 @@ exists-trace
 
 lemma Executability_Journalist_Response:
 exists-trace
-"Ex #t1 #t2 s_pk j nr m.
+"Ex #t1 #t2 #t3 s s_pk j nr m.
         Journalist_Sent(j, nr, s_pk, m) @ #t1
       & Source_Recieved(s_pk, m) @ #t2
+      & Register_Source(s, s_pk) @ #t3
       & (not Ex #x. SomeCompromise() @ #x)"
 
 // lemma Executability_Source_Response:
