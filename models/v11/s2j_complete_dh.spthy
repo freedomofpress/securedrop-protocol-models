@@ -71,7 +71,10 @@ rule Journalist_Enrollment [color=#FF7F50]:
 
 rule Reveal_Journalist_Signing_Key [color=#FF6961]:
   [ !Ltk_Journalist_Signing(A, ltk) ]
-  --[ Reveal_Journalist_Signing_Key(A), Reveal_Longterm_Secret(A), Reveal(A), SomeCompromise() ]->
+  --[ Reveal_Journalist_Signing_Key(A)
+    , Reveal_Longterm_Secret(A)
+    , Reveal(A)
+    , SomeCompromise() ]->
   [ Out(ltk) ]
 
 rule Journalist_Register_Ephemeral_Key [color=#FF7F50]:
@@ -87,7 +90,7 @@ rule Journalist_Register_Ephemeral_Key [color=#FF7F50]:
 
 rule Reveal_Journalist_Ephemeral_Key [color=#FF6961]:
   [ Journalist_Ephemeral_Key_Reveal(J, je_sk) ]
-  --[ Reveal_Journalist_Ephemeral_Key(J, 'g'^je_sk)
+  --[ Reveal_Journalist_Ephemeral_Key('g'^je_sk)
     , Reveal(J)
     , SomeCompromise() ]->
   [ Out(je_sk) ]
@@ -97,7 +100,7 @@ rule Reveal_Journalist_Ephemeral_Key [color=#FF6961]:
 rule Source_Submit [derivchecks, color=#6495ED]:
   let s_pk = 'g'^s_sk
       k = (je_pk^~me_sk)^s_sk
-      m = <'msg', ~msg, ~me_sk, s_pk, $NR>
+      m = <'msg', ~msg, ~me_sk, s_pk, $J, $NR>
       c = senc(m, k)
       me_pk = ('g'^~me_sk)^s_sk
   in
@@ -123,7 +126,7 @@ rule Source_Submit [derivchecks, color=#6495ED]:
 
 rule Journalist_Recv [derivchecks, color=#6495ED]:
   let k = me_pk^je_sk
-      m = <'msg', msg, me_sk, s_pk, $NR>
+      m = <'msg', msg, me_sk, s_pk, $J, $NR>
       je_pk = 'g'^je_sk
   in
   [ In(<senc(m, k), me_pk>)
@@ -244,7 +247,7 @@ lemma Secrecy_Source_Message:
   ==>   (not Ex #x. K(m) @ #x)
       | (Ex #x. Reveal_Journalist_Signing_Key(j) @ #x)
       | (Ex #x. Reveal_Newsroom_Key(nr) @ #x)
-      | (Ex #x. Reveal_Journalist_Ephemeral_Key(j, je_pk) @ #x)"
+      | (Ex #x. Reveal_Journalist_Ephemeral_Key(je_pk) @ #x)"
 
 lemma PFS_Source_Message:
 "All #t s j je_pk nr m. 
@@ -252,7 +255,7 @@ lemma PFS_Source_Message:
   ==>   (not Ex #x. K(m) @ #x)
       | (Ex #x. Reveal_Journalist_Signing_Key(j) @ #x & #x < #t)
       | (Ex #x. Reveal_Newsroom_Key(nr) @ #x & #x < #t)
-      | (Ex #x. Reveal_Journalist_Ephemeral_Key(j, je_pk) @ #x)"
+      | (Ex #x. Reveal_Journalist_Ephemeral_Key(je_pk) @ #x)"
 
 lemma Secrecy_Journalist_Message:
 "All #t1 #t2 j nr s_pk m. 
@@ -274,8 +277,7 @@ lemma Non_Injective_Agreement_Source_Message:
       & Register_Source(s_pk) @ #t2
   ==>   (Ex #x je_pk_2. Source_Sent(s_pk, j, je_pk_2, nr, m) @ #x & #x < #t1) 
       | (Ex #x. Reveal_Source_Encryption_Key(s_pk) @ #x)
-      | (Ex #x. Reveal(j) @ #x)
-      | (Ex #x. Reveal(nr) @ #x)"
+      | (Ex #x. Reveal_Journalist_Ephemeral_Key(je_pk_1) @ #x)"
   
 lemma Injective_Agreement_Source_Message:
 "All #t1 #t2 j je_pk_1 nr s_pk m. 
@@ -285,7 +287,6 @@ lemma Injective_Agreement_Source_Message:
               & #x1 < #t1
               & not (Ex j_2 je_pk_3 nr_2 s_pk_2 #x2. Journalist_Received(j_2, je_pk_3, nr_2, s_pk_2, m) @ #x2 & not (#x2 = #t1)))
       | (Ex #x. Reveal_Source_Encryption_Key(s_pk) @ #x)
-      | (Ex #x. Reveal(j) @ #x)
-      | (Ex #x. Reveal(nr) @ #x)"
+      | (Ex #x. Reveal_Journalist_Ephemeral_Key(je_pk_1) @ #x)"
 
 end
