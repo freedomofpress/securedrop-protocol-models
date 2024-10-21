@@ -85,7 +85,7 @@ rule Journalist_Register_Ephemeral_Key [color=#FF7F50]:
   , Fr(~je_sk) ]
   -->
   [ Out(<je_pk, sig_je_pk>)
-  , Journalist_Ephemeral_Key($J, ~je_sk)
+  , !Journalist_Ephemeral_Key($J, ~je_sk)
   , Journalist_Ephemeral_Key_Reveal($J, ~je_sk) ]
 
 rule Reveal_Journalist_Ephemeral_Key [color=#FF6961]:
@@ -97,18 +97,24 @@ rule Reveal_Journalist_Ephemeral_Key [color=#FF6961]:
 
 // Messaging and Fetching Protocol
 
-rule Source_Submit [derivchecks, color=#6495ED]:
+rule Source_Submission [color=#6495ED]:
+  [ In(je_pk)
+  , Fr(~msg) ]
+  -->
+  [ Source_Recv($S, ~msg, $J, je_pk) ]
+
+rule Source_Send [derivchecks, color=#6495ED]:
   let s_pk = 'g'^s_sk
       k = (je_pk^~me_sk)^s_sk
       m = <'msg', ~msg, ~me_sk, s_pk, $J, $NR>
       c = senc(m, k)
       me_pk = ('g'^~me_sk)^s_sk
   in
-  [ !Ltk_Source_Encryption($S, s_sk)
+  [ Source_Recv($S, ~msg, $J, je_pk)
+  , !Ltk_Source_Encryption($S, s_sk)
   , !Pk_Newsroom($NR, nr_pk)
   , !Pk_Journalist_Signing($J, j_pk)
   , In(<j_pk, sig_j_pk, je_pk, sig_je_pk>)
-  , Fr(~msg)
   , Fr(~ss)
   , Fr(~me_sk) ]
   --[ // check signatures of journalist's longterm signature and ephemeral encryption keys
@@ -130,56 +136,61 @@ rule Journalist_Recv [derivchecks, color=#6495ED]:
       je_pk = 'g'^je_sk
   in
   [ In(<senc(m, k), me_pk>)
-  , Journalist_Ephemeral_Key($J, je_sk)
   , !Journalist_Enrolled($NR, $J)]
   --[ Eq(me_pk, s_pk^me_sk) // check that public key is the one used for encryption
     , DHElement_Check(me_pk)
     , DHElement_Check(s_pk)
     , DHElement_Check(k)
+    , OnlyOnce(<$J, je_sk>)
       // Actions for Lemmas
     , Symmetric_Encryption_IN(m, k)
     , Journalist_Received($J, je_pk, $NR, s_pk, m)
     ]->
   [ Journalist_Recv($J, $NR, s_pk, msg) ]
 
-rule Journalist_Reply [color=#6495ED]:
-  let k = s_pk^~me_sk
-      m = <'msg', ~msg>
+rule Journalist_Send [color=#6495ED]:
+  let je_pk = 'g'^je_sk
+      k = (s_pk^~me_sk)^je_sk
+      m = <'msg', ~msg, ~me_sk, je_pk, $J, s_pk>
       c = senc(m, k)
-      me_pk = 'g'^~me_sk
+      me_pk = ('g'^~me_sk)^je_sk
   in
   [ Journalist_Recv($J, $NR, s_pk, msg_old)
+  , !Journalist_Ephemeral_Key($J, je_sk)
   , Fr(~msg)
   , Fr(~me_sk)
-  , Fr(~je_sk)
   , Fr(~ss) ]
   --[ // Actions for Lemmas
       Symmetric_Encryption_OUT(m, k)
-    , Journalist_Sent($J, $NR, s_pk, m)
+    , Journalist_Sent($J, je_pk, s_pk, m)
     ]->
   [ Out(<c, me_pk>) ]
 
 rule Source_Recv [color=#6495ED]:
   let k = me_pk^s_sk
-      m = <'msg', msg>
       s_pk = 'g'^s_sk
+      m = <'msg', msg, me_sk, je_pk, $J, s_pk>
   in
   [ In(<senc(m, k), me_pk>)
   , !Ltk_Source_Encryption($S, s_sk) ]
-  --[ // Actions for Lemmas
-      Symmetric_Encryption_IN(m, k)
-    , Source_Received(s_pk, m)
+  --[ Eq(me_pk, je_pk^me_sk) // check that public key is the one used for encryption
+    , DHElement_Check(me_pk)
+    , DHElement_Check(je_pk)
+    , DHElement_Check(k)
+      // Actions for Lemmas
+    , Symmetric_Encryption_IN(m, k)
+    , Source_Received(s_pk, $J, je_pk, m)
     ]->
-  [ Source_Recv($S, msg, $J) ]
+  [ Source_Recv($S, msg, $J, je_pk) ]
 
 // rule Source_Reply [derivchecks, color=#6495ED]:
 //   let s_pk = 'g'^s_sk
-//       k = je_pk^~me_sk
-//       m = <'msg', ~msg, s_pk>
+//       k = (je_pk^~me_sk)^s_sk
+//       m = <'msg', ~msg, ~me_sk, s_pk, $J, $NR>
 //       c = senc(m, k)
-//       me_pk = 'g'^~me_sk
+//       me_pk = ('g'^~me_sk)^s_sk
 //   in
-//   [ Source_Recv($S, msg_old, $J)
+//   [ Source_Recv($S, msg, $J, je_pk)
 //   , !Ltk_Source_Encryption($S, s_sk)
 //   , !Pk_Newsroom($NR, nr_pk)
 //   , !Pk_Journalist_Signing($J, j_pk)
@@ -187,12 +198,17 @@ rule Source_Recv [color=#6495ED]:
 //   , Fr(~msg)
 //   , Fr(~ss)
 //   , Fr(~me_sk) ]
-//   --[ Eq(verify(sig_j_pk, j_pk, nr_pk), true)
+//   --[ // check signatures of journalist's longterm signature and ephemeral encryption keys
+//       Eq(verify(sig_j_pk, j_pk, nr_pk), true)
 //     , Eq(verify(sig_je_pk, <'ephemeral', je_pk>, j_pk), true)
+//       // sanity check of DH elements used
+//     , DHElement_Check(je_pk)
+//     , DHElement_Check(k)
+//     , DHElement_Check(me_pk)
+//       // Actions for Lemmas
 //     , Symmetric_Encryption_OUT(m, k)
-//     , Source_Message_Sent($S, $J, je_pk, $NR, ~msg)
-//     , Source_Response($S, $J, $NR, msg_old, ~msg)
-//     , Sent($S, $J, m) ]->
+//     , Source_Sent(s_pk, $J, je_pk, $NR, m)
+//     ]->
 //   [ Out(<c, me_pk>) ]
 
 restriction Eq:
@@ -224,10 +240,9 @@ exists-trace
 
 lemma Executability_Journalist_Response:
 exists-trace
-"Ex #t1 #t2 #t3 s_pk j nr m.
-        Journalist_Sent(j, nr, s_pk, m) @ #t1
-      & Source_Received(s_pk, m) @ #t2
-      & Register_Source(s_pk) @ #t3
+"Ex #t1 #t2 s_pk j je_pk m.
+        Journalist_Sent(j, je_pk, s_pk, m) @ #t1
+      & Source_Received(s_pk, j, je_pk, m) @ #t2
       & (not Ex #x. SomeCompromise() @ #x)"
 
 // lemma Executability_Source_Response:
@@ -288,5 +303,21 @@ lemma Injective_Agreement_Source_Message:
               & not (Ex j_2 je_pk_3 nr_2 s_pk_2 #x2. Journalist_Received(j_2, je_pk_3, nr_2, s_pk_2, m) @ #x2 & not (#x2 = #t1)))
       | (Ex #x. Reveal_Source_Encryption_Key(s_pk) @ #x)
       | (Ex #x. Reveal_Journalist_Ephemeral_Key(je_pk_1) @ #x)"
+
+lemma Non_Injective_Agreement_Journalist_Message:
+"All #t1 j je_pk s_pk m. 
+        Source_Received(s_pk, j, je_pk, m) @ #t1
+  ==>   (Ex #x. Journalist_Sent(j, je_pk, s_pk, m) @ #x & #x < #t1) 
+      | (Ex #x. Reveal_Source_Encryption_Key(s_pk) @ #x)
+      | (Ex #x. Reveal_Journalist_Ephemeral_Key(je_pk) @ #x)"
+  
+lemma Injective_Agreement_Journalist_Message:
+"All #t1 j je_pk s_pk m. 
+        Source_Received(s_pk, j, je_pk, m) @ #t1
+  ==>   (Ex #x1 je_pk. Journalist_Sent(j, je_pk, s_pk, m) @ #x1 
+              & #x1 < #t1
+              & not (Ex j_2 je_pk_2 s_pk_2 #x2. Source_Received(s_pk_2, j_2, je_pk_2, m) @ #x2 & not (#x2 = #t1)))
+      | (Ex #x. Reveal_Source_Encryption_Key(s_pk) @ #x)
+      | (Ex #x. Reveal_Journalist_Ephemeral_Key(je_pk) @ #x)"
 
 end

@@ -8,10 +8,22 @@ USER:=$(shell whoami)
 run:
 	@tamarin-prover-release +RTS -N$(N_THREADS) -RTS interactive "$(DIR)" --port=$(PORT)
 
+download_local:
+	@if [ ! -d "./$(DIR)/theories" ]; then \
+		mkdir "./$(DIR)/theories"; \
+	fi
+	@tamarin-prover-release +RTS -N$(N_THREADS) -RTS --Output="./$(DIR)/theories" --prove "$(DIR)/$(FILE)"
+
 # run for different model on local machine with:
 # make run DIR="path/to/model/"
 run_local:
 	@tamarin-prover +RTS -N$(N_THREADS) -RTS interactive "$(DIR)"
+
+download_local:
+	@if [ ! -d "./$(DIR)/theories" ]; then \
+		mkdir "./$(DIR)/theories"; \
+	fi
+	@tamarin-prover +RTS -N$(N_THREADS) -RTS --Output="./$(DIR)/theories" --prove "$(DIR)/$(FILE)"
 
 # runs the tamarin-prover with the "auto-sources" flag which tries to automatically generate source lemmas
 # to remove partial deconstructions
