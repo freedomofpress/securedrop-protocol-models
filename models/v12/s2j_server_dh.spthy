@@ -18,6 +18,18 @@ Color semantics:
 
  */
 
+// Channel Rules
+
+rule ChanOut_S:
+  [ Out_S(A,B,x) ]
+  -->
+  [ !Sec(A,B,x) ]
+
+rule ChanIn_S:
+  [ !Sec(A,B,x) ]
+  --[ OnlyOnce(<A,B,x>) ]-> // assuming the secure channel provides replay protection
+  [ In_S(B,A,x) ]
+
 // Key Registration
 
 rule Register_Newsroom_Key [color=#FDFD96]:
@@ -106,17 +118,12 @@ rule Reveal_Journalist_Ephemeral_Key [color=#FF6961]:
 
 rule Source_Send [color=#6495ED]:
   let s_pk = 'g'^s_sk
-      k = (je_pk^~me_sk)^s_sk
-      // k = je_pk^~me_sk
-      m = <'msg_s2j', ~msg, ~me_sk, s_pk, $J, $NR>
-      // m = <'msg_s2j', ~msg, s_pk>
+      k = je_pk^~me_sk
+      m = <'msg_s2j', ~msg, s_pk>
       c = senc(m, k)
-      me_pk = ('g'^~me_sk)^s_sk
-      // me_pk = ('g'^~me_sk)
+      me_pk = ('g'^~me_sk)
   in
-  [ 
-    // Source_Recv($S, ~msg, $J, je_pk)
-    !Ltk_Source_Encryption($S, s_sk)
+  [ !Ltk_Source_Encryption($S, s_sk)
   , !Pk_Newsroom($NR, nr_pk)
   , !Pk_Journalist_Signing($J, j_pk)
   , In(<j_pk, sig_j_pk, je_pk, sig_je_pk>)
@@ -134,20 +141,17 @@ rule Source_Send [color=#6495ED]:
     , Symmetric_Encryption_OUT(m, k)
     , Source_Sent(s_pk, $J, je_pk, $NR, m)
     ]->
-  [ Out(<c, me_pk>) ]
+  [ Out_S(s_pk, $J, <c, me_pk>) ]
 
 rule Journalist_Recv [color=#6495ED]:
   let k = me_pk^je_sk
-      m = <'msg_s2j', msg, me_sk, s_pk, $J, $NR>
-      // m = <'msg_s2j', msg, s_pk>
+      m = <'msg_s2j', msg, s_pk>
       je_pk = 'g'^je_sk
   in
-  [ In(<senc(m, k), me_pk>)
+  [ In_S($J, s_pk, <senc(m, k), me_pk>)
   , !Journalist_Ephemeral_Key($J, je_sk)
   , !Journalist_Enrolled($NR, $J)]
-  --[ 
-      Eq(me_pk, s_pk^me_sk) // check that public key is the one used for encryption
-    , DHElement_Check(me_pk)
+  --[ DHElement_Check(me_pk)
     , DHElement_Check(s_pk)
     , DHElement_Check(k)
     , OnlyOnce(<$J, je_sk>)
@@ -159,10 +163,10 @@ rule Journalist_Recv [color=#6495ED]:
 
 rule Journalist_Send [color=#6495ED]:
   let j_pk = 'g'^j_sk
-      k = (s_pk^~me_sk)^j_sk
-      m = <'msg_j2s', ~msg, ~me_sk, j_pk, $J, s_pk>
+      k = s_pk^~me_sk
+      m = <'msg_j2s', ~msg, j_pk>
       c = senc(m, k)
-      me_pk = ('g'^~me_sk)^j_sk
+      me_pk = 'g'^~me_sk
   in
   [ Journalist_Recv($J, $NR, s_pk, msg_old)
   , !Ltk_Journalist_Signing($J, j_sk)
@@ -172,18 +176,17 @@ rule Journalist_Send [color=#6495ED]:
       Symmetric_Encryption_OUT(m, k)
     , Journalist_Sent($J, s_pk, m)
     ]->
-  [ Out(<c, me_pk>) ]
+  [ Out_S($J, s_pk, <c, me_pk>) ]
 
 rule Source_Recv [color=#6495ED]:
   let k = me_pk^s_sk
       s_pk = 'g'^s_sk
-      m = <'msg_j2s', msg, me_sk, j_pk, $J, s_pk>
+      m = <'msg_j2s', msg, j_pk>
   in
-  [ In(<senc(m, k), me_pk>)
+  [ In_S(s_pk, $J, <senc(m, k), me_pk>)
   , !Ltk_Source_Encryption($S, s_sk)
   , !Pk_Journalist_Signing($J, j_pk) ]
-  --[ Eq(me_pk, j_pk^me_sk) // check that public key is the one used for encryption
-    , DHElement_Check(me_pk)
+  --[ DHElement_Check(me_pk)
     , DHElement_Check(j_pk)
     , DHElement_Check(k)
       // Actions for Lemmas
@@ -224,17 +227,6 @@ exists-trace
 "Ex #t1 #t2 s_pk j m.
         Journalist_Sent(j, s_pk, m) @ #t1
       & Source_Received(s_pk, j, m) @ #t2
-      & (not Ex #x. SomeCompromise() @ #x)"
-
-lemma Executability_Source_Response:
-exists-trace
-"Ex #t1 #t2 #t3 #t4 #t5 #t6 s j nr m_old m m_new.
-        Source_Submission(s, j, nr, m_old) @ #t1
-      & Journalist_Read(j, m_old) @ #t2
-      & Journalist_Response(j, m_old, m) @ #t3
-      & Source_Read(s, m) @ #t4
-      & Source_Response(s, j, nr, m, m_new) @ #t5
-      & Journalist_Read(j, m_new) @ #t6
       & (not Ex #x. SomeCompromise() @ #x)"
 
 lemma Auto_Secrecy_Source_Message:
