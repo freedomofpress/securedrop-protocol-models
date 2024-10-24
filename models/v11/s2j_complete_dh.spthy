@@ -57,7 +57,7 @@ rule Reveal_Source_Encryption_Key [color=#FF6961]:
 // Journalist Enrollment
 
 rule Journalist_Enrollment [color=#FF7F50]:
-  let j_pk = pk(~j_sk)
+  let j_pk = 'g'^~j_sk
       sig_j_pk = sign(<'signature', j_pk>, nr_sk)
   in
   [ !Ltk_Newsroom($NR, nr_sk)
@@ -67,8 +67,7 @@ rule Journalist_Enrollment [color=#FF7F50]:
   [ Out(<j_pk, sig_j_pk>)
   , !Journalist_Enrolled($NR, $J)
   , !Ltk_Journalist_Signing($J, ~j_sk)
-  , !Pk_Journalist_Signing($J, j_pk)
-  , !Pk_Journalist_Signing($J, 'g'^~j_sk) ]
+  , !Pk_Journalist_Signing($J, j_pk) ]
 
 rule Reveal_Journalist_Signing_Key [color=#FF6961]:
   [ !Ltk_Journalist_Signing(A, ltk) ]
