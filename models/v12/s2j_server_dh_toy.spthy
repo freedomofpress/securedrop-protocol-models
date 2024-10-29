@@ -22,7 +22,7 @@ Color semantics:
 
 rule ClientOut[color=#FFFFFF]:
   [ Client_Out(~sess, $Server, msg), !Message_Server($Server) ]
-  --[ Client_Sent(msg) ]->
+  -->
   [ !Client(~sess, $Server, msg) ]
 
 rule AdversaryClientOut[color=#FF6961]:
@@ -53,9 +53,9 @@ rule ServerToAdversaryClient[color=#FF6961]:
 // Server Rules
 
 rule Server_Receive_Message:
-  [ Server_In(~sess, $Server, <'ciphertext', <c, me_pk, m_gdh>>)]
+  [ Server_In(~sess, $Server, <'ciphertext', <c, me_pk>>)]
   -->
-  [ !Stored_Ciphertext($Server, <c, me_pk, m_gdh>)]
+  [ !Stored_Ciphertext($Server, <c, me_pk>)]
 
 rule Server_Receive_Fetch_Request:
   [ Server_In(~sess, $Server, 'fetch_messages') ]
@@ -63,18 +63,14 @@ rule Server_Receive_Fetch_Request:
   [ !Server_Fetched_Messages(~sess, $Server) ]
 
 rule Server_Create_Challenge:
-  let kmid = m_gdh^~re_sk
-      pmgdh = me_pk^~re_sk
-      enc_id = senc(~id, kmid)
-  in
   [ !Server_Fetched_Messages(~sess, $Server)
-  , !Stored_Ciphertext($Server, <c, me_pk, m_gdh>)
+  , !Stored_Ciphertext($Server, <c, me_pk>)
   , Fr(~re_sk)
   , Fr(~id) ]
   -->
   [ !Server_Fetched_Messages(~sess, $Server)
   , Stored_Ciphertext_Challenge($Server, ~sess, ~id, <c, me_pk>)
-  , Server_Out(~sess, $Server, <'challenge', <enc_id, pmgdh>>) ]
+  , Server_Out(~sess, $Server, <'challenge', ~id>) ]
 
 rule Server_Challenge_Response:
   [ Stored_Ciphertext_Challenge($Server, ~sess, ~id, <c, me_pk>)
@@ -205,7 +201,6 @@ rule Source_Send [color=#6495ED]:
       m = <'msg_s2j', ~msg, s_pk, sc_pk, $NR>
       c = senc(m, k)
       me_pk = ('g'^~me_sk)
-      m_gdh = jc_pk^~me_sk
   in
   [ !Ltk_Source_Encryption($S, s_sk)
   , !Ltk_Source_Fetching($S, sc_sk)
@@ -229,7 +224,7 @@ rule Source_Send [color=#6495ED]:
     , Symmetric_Encryption_OUT(m, k)
     , Source_Sent(s_pk, $J, je_pk, $NR, m)
     ]->
-  [ Client_Out(~sess, $Server, <'ciphertext', <c, me_pk, m_gdh>>) ]
+  [ Client_Out(~sess, $Server, <'ciphertext', <c, me_pk>>) ]
 
 rule Journalist_Fetch_Messages [color=#B4D9EF]:
   [ Fr(~sess)
@@ -240,11 +235,9 @@ rule Journalist_Fetch_Messages [color=#B4D9EF]:
   , !Journalist_Fetched_Messages($J, $NR, $Server, ~sess) ]
 
 rule Journalist_Solve_Fetch_Challenge [color=#B4D9EF]:
-  let kmid = pmgdh^jc_sk
-  in
   [ !Journalist_Fetched_Messages($J, $NR, $Server, ~sess)
   , !Ltk_Journalist_Signing($J, jc_sk)
-  , Client_In(~sess, $Server, <'challenge', <senc(id, kmid), pmgdh>>) ]
+  , Client_In(~sess, $Server, <'challenge', id>) ]
   -->
   [ Client_Out(~sess, $Server, <'solution', id>) ]
 
