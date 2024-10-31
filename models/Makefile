@@ -1,3 +1,4 @@
+TAMARIN_RELEASE=tamarin-prover-release-1.10.0
 N_THREADS=10
 PORT=1611 # used port for port-forwarding the GUI
 DIR="v1/"
@@ -6,7 +7,7 @@ USER:=$(shell whoami)
 # run for different model on the tamarin-server with:
 # make run DIR="path/to/model/"
 run:
-	@tamarin-prover-release +RTS -N$(N_THREADS) -RTS interactive "$(DIR)" --port=$(PORT)
+	@$(TAMARIN_RELEASE) +RTS -N$(N_THREADS) -RTS interactive "$(DIR)" --port=$(PORT)
 
 # proves all lemmas with "Auto" prefix and stores theory in DIR/theories
 # make download DIR="path/to/model" FILE="theory.spthy"
@@ -14,7 +15,7 @@ download:
 	@if [ ! -d "./$(DIR)/theories" ]; then \
 		mkdir "./$(DIR)/theories"; \
 	fi
-	@tamarin-prover-release +RTS -N$(N_THREADS) -RTS --Output="./$(DIR)/theories" --prove=Auto* "$(DIR)/$(FILE)"
+	@$(TAMARIN_RELEASE) +RTS -N$(N_THREADS) -RTS --Output="./$(DIR)/theories" --prove=Auto* "$(DIR)/$(FILE)"
 
 # run for different model on local machine with:
 # make run DIR="path/to/model/"
