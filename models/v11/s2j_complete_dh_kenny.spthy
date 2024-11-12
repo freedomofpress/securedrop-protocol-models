@@ -66,7 +66,7 @@ rule Reveal_Source_PKE_Key [color=#FF6961]:
   --[ Reveal_Source_PKE_Key($A)
     , Reveal_Source_PKE_Key(s_pke_pk)
     , SomeCompromise() ]->
-  [ Out(s_pke_pk) ]
+  [ Out(s_pke_sk) ]
 
 // Journalist Enrollment
 
