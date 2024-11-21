@@ -90,7 +90,7 @@ rule Reveal_Source_PKE_Key [color=#FF6961]:
   [ Out(s_pke_sk) ]
 
 rule Reveal_Source_KEM_Key [color=#FF6961]:
-  let s_kem_pk = pk(s_kem_sk)
+  let s_kem_pk = pqpk(s_kem_sk)
   in
   [ Ltk_Source_KEM_Key_Reveal($A, s_kem_sk) ]
   --[ Reveal_Source_KEM_Key($A)
@@ -148,7 +148,7 @@ rule Journalist_Register_Ephemeral_Key [color=#FF7F50]:
   , Fr(~je_kem_sk) ]
   --[ PrePQAttack() ]->
   [ Out(<<je_dh_pk, je_pke_pk, je_kem_pk>,  sig_je_pk>)
-  , !Journalist_Ephemeral_Key($J, ~je_dh_sk, ~je_pke_sk, ~je_kem_sk)
+  , Journalist_Ephemeral_Key($J, ~je_dh_sk, ~je_pke_sk, ~je_kem_sk)
   , Journalist_EDH_Key_Reveal($J, ~je_dh_sk)
   , Journalist_EPKE_Key_Reveal($J, ~je_pke_sk)
   , Journalist_EKEM_Key_Reveal($J, ~je_kem_sk)
@@ -207,8 +207,6 @@ rule Source_Send [color=#6495ED]:
   --[ // check signatures of journalist's longterm signature and ephemeral encryption keys
       Eq(verify(sig_j_pk, <'signature', <j_sig_pk, j_dh_pk>>, nr_pk), true)
     , Eq(verify(sig_je_pk, <'ephemeral', <je_dh_pk, je_pke_pk, je_kem_pk>>, j_sig_pk), true)
-      // sanity check of DH elements used
-    , DHElement_Check(k)
       // Actions for Lemmas
     , Symmetric_Encryption_OUT(m, k)
     , Source_Sent(s_dh_pk, j_sig_pk, je_dh_pk, je_pke_pk, je_kem_pk, $NR, m)
@@ -221,23 +219,22 @@ rule Journalist_Recv [color=#6495ED]:
   let ss = decap(ss_encap, ~je_kem_sk)
       j_sig_pk = pk(~j_sig_sk)
       k = kdf(<kdf(ss), s_dh_pk^~je_dh_sk, me_pk^~je_dh_sk>)
-      m = <'msg_s2j', msg, s_pke_pk, s_kem_pk, j_sig_pk, $NR>
+      m = <'msg_s2j', ~msg, s_pke_pk, s_kem_pk, j_sig_pk, $NR>
       je_dh_pk = 'g'^~je_dh_sk
       je_pke_pk = pk(~je_pke_sk)
       je_kem_pk = pqpk(~je_kem_sk)
   in
   [ In(<senc(m, k), aenc(<'s_pk', s_dh_pk>, pk(~je_pke_sk)), me_pk, ss_encap>)
-  , !Journalist_Ephemeral_Key($J, ~je_dh_sk, ~je_pke_sk, ~je_kem_sk)
+  , Journalist_Ephemeral_Key($J, ~je_dh_sk, ~je_pke_sk, ~je_kem_sk)
   , !Ltk_Journalist_SIG_Key($J, ~j_sig_sk)
   , !Journalist_Enrolled($NR, $J)]
   --[ DHElement_Check(k)
-    , OnlyOnce(<$J, ~je_dh_sk, ~je_pke_sk, ~je_kem_sk>)
       // Actions for Lemmas
     , Symmetric_Encryption_IN(m, k)
     , Journalist_Received(j_sig_pk, je_dh_pk, je_pke_pk, je_kem_pk, $NR, s_dh_pk, m)
     , PrePQAttack()
     ]->
-  [ Journalist_Recv($J, $NR, <s_dh_pk, s_pke_pk, s_kem_pk>, msg) ]
+  [ Journalist_Recv($J, $NR, s_dh_pk, s_pke_pk, s_kem_pk, m) ]
 
 rule Journalist_Send [color=#6495ED]:
   let k = kdf(<kdf(~ss), s_dh_pk^~j_dh_sk, s_dh_pk^~me_sk>)
@@ -248,14 +245,15 @@ rule Journalist_Send [color=#6495ED]:
       me_pk = 'g'^~me_sk
       ss_encap = encap(~ss, s_kem_pk)
   in
-  [ Journalist_Recv($J, $NR, <s_dh_pk, s_pke_pk, s_kem_pk>, msg_old)
+  [ Journalist_Recv($J, $NR, s_dh_pk, s_pke_pk, s_kem_pk, m_old)
   , !Ltk_Journalist_DH_Key($J, ~j_dh_sk)
   , Fr(~msg)
   , Fr(~me_sk)
   , Fr(~ss) ]
   --[ // Actions for Lemmas
       Symmetric_Encryption_OUT(m, k)
-    , Journalist_Sent(j_dh_pk, s_dh_pk, m)
+    , Journalist_Sent(j_dh_pk, s_dh_pk, s_kem_pk, m)
+    , Journalist_Response(j_dh_pk, s_dh_pk, s_kem_pk, m_old, m)
     , PrePQAttack()
     ]->
   [ Out(<c, enc_gj, me_pk, ss_encap>) 
@@ -266,9 +264,10 @@ rule Source_Recv [color=#6495ED]:
       s_pke_sk = kdf(<'PKE', ~passphrase>)
       s_kem_sk = kdf(<'KEM', ~passphrase>)
       s_dh_pk = 'g'^s_dh_sk
+      s_kem_pk = pqpk(s_kem_sk)
       ss = decap(ss_encap, s_kem_sk)
       k = kdf(<kdf(ss), j_dh_pk^s_dh_sk, me_pk^s_dh_sk>)
-      m = <'msg_j2s', msg>
+      m = <'msg_j2s', ~msg>
   in
   [ In(<senc(m, k), aenc(<'j_pk', j_dh_pk>, pk(s_pke_sk)), me_pk, ss_encap>)
   , !Ltk_Source_Passphrase($S, ~passphrase) ]
@@ -277,10 +276,10 @@ rule Source_Recv [color=#6495ED]:
     , DHElement_Check(k)
       // Actions for Lemmas
     , Symmetric_Encryption_IN(m, k)
-    , Source_Received(s_dh_pk, j_dh_pk, m)
+    , Source_Received(s_dh_pk, s_kem_pk, j_dh_pk, m)
     , PrePQAttack()
     ]->
-  [ Source_Recv($S, msg, $J) ]
+  []
 
 restriction Eq:
   "All t1 t2 #x. Eq(t1, t2) @ #x ==> t1 = t2"
@@ -309,52 +308,19 @@ exists-trace
       & Journalist_Received(j_sig_pk, je_dh_pk, je_pke_pk, je_kem_pk, nr, s_dh_pk, m) @ #t2
       & (not Ex #x. SomeCompromise() @ #x)"
 
+// this lemma can be automatically proven
+// it imples PQ secrecy and PFS
 lemma Auto_Secrecy_Source_Message:
 "All #t s_dh_pk j_sig_pk je_dh_pk je_pke_pk je_kem_pk nr m. 
         Source_Sent(s_dh_pk, j_sig_pk, je_dh_pk, je_pke_pk, je_kem_pk, nr, m) @ #t
-      & (not Ex #x. PQAttack() @ #x)
-  ==>   (not Ex #x. K(m) @ #x)
-      | (Ex #x. Reveal_Journalist_SIG_Key(j_sig_pk) @ #x)
-      | (Ex #x. Reveal_Newsroom_Key(nr) @ #x)
-      | (Ex #x. Reveal_Journalist_EDH_Key(je_dh_pk) @ #x)"
-
-lemma Auto_PQ_Secrecy_Source_Message:
-"All #t s_dh_pk j_sig_pk je_dh_pk je_pke_pk je_kem_pk nr m. 
-        Source_Sent(s_dh_pk, j_sig_pk, je_dh_pk, je_pke_pk, je_kem_pk, nr, m) @ #t
-  ==>   (not Ex #x. K(m) @ #x)
-      | (Ex #x. Reveal_Journalist_SIG_Key(j_sig_pk) @ #x)
-      | (Ex #x. Reveal_Newsroom_Key(nr) @ #x)
-      | (Ex #x. Reveal_Journalist_EDH_Key(je_dh_pk) @ #x)
-      | (Ex #x. Reveal_Journalist_EKEM_Key(je_kem_pk) @ #x)"
-
-lemma Auto_PFS_Source_Message:
-"All #t s_dh_pk j_sig_pk je_dh_pk je_pke_pk je_kem_pk nr m. 
-        Source_Sent(s_dh_pk, j_sig_pk, je_dh_pk, je_pke_pk, je_kem_pk, nr, m) @ #t
-      & (not Ex #x. PQAttack() @ #x)
   ==>   (not Ex #x. K(m) @ #x)
       | (Ex #x. Reveal_Journalist_SIG_Key(j_sig_pk) @ #x & #x < #t)
       | (Ex #x. Reveal_Newsroom_Key(nr) @ #x & #x < #t)
-      | (Ex #x. Reveal_Journalist_EDH_Key(je_dh_pk) @ #x)"
+      | (  (  (Ex #x. Reveal_Journalist_EDH_Key(je_dh_pk) @ #x)
+            | (Ex #x. PQAttack() @ #x))
+         & (Ex #x. Reveal_Journalist_EKEM_Key(je_kem_pk) @ #x))"
 
-lemma Auto_PQ_PFS_Source_Message:
-"All #t s_dh_pk j_sig_pk je_dh_pk je_pke_pk je_kem_pk nr m. 
-        Source_Sent(s_dh_pk, j_sig_pk, je_dh_pk, je_pke_pk, je_kem_pk, nr, m) @ #t
-  ==>   (not Ex #x. K(m) @ #x)
-      | (Ex #x. Reveal_Journalist_SIG_Key(j_sig_pk) @ #x & #x < #t)
-      | (Ex #x. Reveal_Newsroom_Key(nr) @ #x & #x < #t)
-      | (Ex #x. Reveal_Journalist_EDH_Key(je_dh_pk) @ #x)
-      | (Ex #x. Reveal_Journalist_EKEM_Key(je_kem_pk) @ #x)"
-
-lemma Auto_Non_Injective_Agreement_Source_Message:
-"All #t1 #t2 j_sig_pk je_dh_pk je_pke_pk je_kem_pk nr s_dh_pk m. 
-        Journalist_Received(j_sig_pk, je_dh_pk, je_pke_pk, je_kem_pk, nr, s_dh_pk, m) @ #t1
-      & Register_Source(s_dh_pk) @ #t2
-  ==>   (Ex #x. Source_Sent(s_dh_pk, j_sig_pk, je_dh_pk, je_pke_pk, je_kem_pk, nr, m) @ #x & #x < #t1) 
-      | (Ex #x. Reveal_Source_DH_Key(s_dh_pk) @ #x)
-      | (Ex #x. Reveal_Journalist_SIG_Key(j_sig_pk) @ #x)
-      | (Ex #x. Reveal_Journalist_EDH_Key(je_dh_pk) @ #x)"
-  
-lemma Auto_Injective_Agreement_Source_Message:
+lemma Auto_Injective_Agreement_Source_Message [reuse]:
 "All #t1 #t2 j_sig_pk je_dh_pk je_pke_pk je_kem_pk nr s_dh_pk m. 
         Journalist_Received(j_sig_pk, je_dh_pk, je_pke_pk, je_kem_pk, nr, s_dh_pk, m) @ #t1
       & Register_Source(s_dh_pk) @ #t2
@@ -367,33 +333,32 @@ lemma Auto_Injective_Agreement_Source_Message:
 
 lemma Auto_Executability_Journalist_Response:
 exists-trace
-"Ex #t1 #t2 s_dh_pk j_dh_pk m.
-        Journalist_Sent(j_dh_pk, s_dh_pk, m) @ #t1
-      & Source_Received(s_dh_pk, j_dh_pk, m) @ #t2
+"Ex #t1 #t2 s_dh_pk s_kem_pk j_dh_pk m.
+        Journalist_Sent(j_dh_pk, s_dh_pk, s_kem_pk, m) @ #t1
+      & Source_Received(s_dh_pk, s_kem_pk, j_dh_pk, m) @ #t2
       & (not Ex #x. SomeCompromise() @ #x)"
 
 // nicht automatisch verifizierbar
 lemma Secrecy_Journalist_Message:
-"All #t1 #t2 j_dh_pk s_dh_pk m. 
-        Journalist_Sent(j_dh_pk, s_dh_pk, m) @ #t1
-      & Register_Source(s_dh_pk) @ #t2
-      & (not Ex #x. PQAttack() @ #x)
+"All #t1 #t2 #t3
+     s_dh_pk j_sig_pk je_dh_pk je_pke_pk je_kem_pk nr m_old
+     j_dh_pk s_kem_pk m.
+        Journalist_Received(j_sig_pk, je_dh_pk, je_pke_pk, je_kem_pk, nr, s_dh_pk, m_old) @ #t1
+      & Journalist_Response(j_dh_pk, s_dh_pk, s_kem_pk, m_old, m) @ #t2
+      & Register_Source(s_dh_pk) @ #t3
   ==>   (not Ex #x. K(m) @ #x)
-      | (Ex #x. Reveal_Source_DH_Key(s_dh_pk) @ #x)"
-
-// nicht automatisch verifizierbar
-lemma PQ_Secrecy_Journalist_Message:
-"All #t1 #t2 j_dh_pk s_dh_pk m. 
-        Journalist_Sent(j_dh_pk, s_dh_pk, m) @ #t1
-      & Register_Source(s_dh_pk) @ #t2
-  ==>   (not Ex #x. K(m) @ #x)
-      | (Ex #x. Reveal_Source_DH_Key(s_dh_pk) @ #x)"
+      | (  (Ex #x. Reveal_Source_KEM_Key(s_kem_pk) @ #x)
+         & (  (Ex #x. PQAttack() @ #x)
+            | (Ex #x. Reveal_Source_DH_Key(s_dh_pk) @ #x)))
+      | (Ex #x. Reveal_Source_DH_Key(s_dh_pk) @ #x)
+      | (Ex #x. Reveal_Journalist_SIG_Key(j_sig_pk) @ #x)
+      | (Ex #x. Reveal_Journalist_EDH_Key(je_dh_pk) @ #x)"
 
 // nicht automatisch verifizierbar
 lemma Non_Injective_Agreement_Journalist_Message:
-"All #t1 j_dh_pk s_dh_pk m.
-        Source_Received(s_dh_pk, j_dh_pk, m) @ #t1
-  ==>   (Ex #x. Journalist_Sent(j_dh_pk, s_dh_pk, m) @ #x & #x < #t1) 
+"All #t1 j_dh_pk s_dh_pk s_kem_pk m.
+        Source_Received(s_dh_pk, s_kem_pk, j_dh_pk, m) @ #t1
+  ==>   (Ex #x. Journalist_Sent(j_dh_pk, s_dh_pk, s_kem_pk, m) @ #x & #x < #t1) 
       | (Ex #x. Reveal_Source_DH_Key(s_dh_pk) @ #x)
       | (Ex #x. Reveal_Journalist_DH_Key(j_dh_pk) @ #x)"
   
