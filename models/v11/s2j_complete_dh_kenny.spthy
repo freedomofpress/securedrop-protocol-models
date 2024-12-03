@@ -318,8 +318,7 @@ exists-trace
       & Journalist_Received(j_sig_pk, je_dh_pk, je_pke_pk, je_kem_pk, nr, s_dh_pk, m) @ #t2
       & (not Ex #x. SomeCompromise() @ #x)"
 
-// this lemma can be automatically proven
-// it imples PQ secrecy and PFS
+// it implies PQ secrecy and PFS
 lemma Auto_Secrecy_Source_Message:
 "All #t s_dh_pk j_sig_pk je_dh_pk je_pke_pk je_kem_pk nr m. 
         Source_Sent(s_dh_pk, j_sig_pk, je_dh_pk, je_pke_pk, je_kem_pk, nr, m) @ #t
@@ -349,7 +348,7 @@ exists-trace
       & (not Ex #x. SomeCompromise() @ #x)"
 
 // nicht automatisch verifizierbar
-lemma Secrecy_Journalist_Message [reuse]:
+lemma Secrecy_Journalist_Message:
 "All #t1 #t2 #t3
      s_dh_pk j_sig_pk je_dh_pk je_pke_pk je_kem_pk nr m_old
      j_dh_pk s_kem_pk m.
