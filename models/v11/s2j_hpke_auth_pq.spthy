@@ -10,7 +10,7 @@ functions: kdf/1
 // hash function
 functions: H/4
 
-// KEM
+// PQ-secure KEM
 functions: pqpk/1, encap/2, decap/2
 equations: decap(encap(k, pqpk(sk)), sk) = k
 
@@ -278,9 +278,8 @@ rule Source_Recv [color=#6495ED,derivchecks]:
   let j_dh_pk = 'g'^~j_dh_sk
       s_dh_sk = kdf(<'DH', ~passphrase>)
       s_pke_sk = kdf(<'PKE', ~passphrase>)
-      s_kem_pk = kdf(<'KEM', ~passphrase>)
+      s_kem_sk = kdf(<'KEM', ~passphrase>)
       s_dh_pk = 'g'^s_dh_sk
-      s_pke_pk = pk(s_pke_sk)
       s_kem_pk = pqpk(s_kem_sk)
       k_pq = decap(c_pq, s_kem_sk)
       c_dhkem = me_pk
