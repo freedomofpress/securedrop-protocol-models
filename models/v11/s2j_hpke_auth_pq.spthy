@@ -281,11 +281,11 @@ rule Source_Recv [color=#6495ED,derivchecks]:
       s_kem_pk = kdf(<'KEM', ~passphrase>)
       s_dh_pk = 'g'^s_dh_sk
       s_pke_pk = pk(s_pke_sk)
-      s_kem_pk = pqpk(s_kem_pk)
+      s_kem_pk = pqpk(s_kem_sk)
       k_pq = decap(c_pq, s_kem_sk)
       c_dhkem = me_pk
       k_dhkem = kdf(<j_dh_pk^s_dh_sk, me_pk^s_dh_sk, me_pk, s_dh_pk, j_dh_pk>)
-      k = H(k_dhkem, c_dhkem, ~k_pq, c_pq)
+      k = H(k_dhkem, c_dhkem, k_pq, c_pq)
       m = <'msg_j2s', ~msg, s_dh_pk, s_kem_pk, j_sig_pk, j_dh_pk, sig_j_pk, $NR>
   in
   [ In(<senc(m, k), aenc(<'j_pk', j_dh_pk>, pk(s_pke_sk)), me_pk, c_pq>)
