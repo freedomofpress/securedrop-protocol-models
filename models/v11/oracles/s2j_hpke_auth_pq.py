@@ -96,8 +96,9 @@ elif argv[1] in ['Auto_Secrecy_Journalist_Message']:
 elif argv[1] in ['Auto_Non_Injective_Agreement_Journalist_Message']:
   match = matchAgainstList([
     '!KU( ~passphrase )',
-    '!KU( ~x',
     '!KU( ~ltk',
+    '!KU( sign(<\'signature\', pk(~j_sig_sk), \'g\'^~x>, ~ltk.1) )',
+    '!KU( ~x',
     re.compile(r'!KU\( ~me_sk(\.\d+)? \)'),
     '!KU( kdf(<\'DH\', ~passphrase>) )',
     '!KU( \'g\'^(~je_dh_sk*kdf(<\'DH\', ~passphrase>)) ) @ #vk.41',
@@ -109,9 +110,9 @@ elif argv[1] in ['Auto_Non_Injective_Agreement_Journalist_Message']:
     re.compile(r'!KU\( aenc\(<\'s_pk\',\s*\'g\'\^\(x'),
     '!Pk_Newsroom',
     '!Ltk_Source_Passphrase',
-    '!KU( sign(<\'signature\', j_sig_pk, \'g\'^~x>, ~ltk) )',
     '!KU( H(kdf(<\'g\'^(~x*kdf(<\'DH\', ~passphrase>)),',
     '!KU( H(kdf(<\'g\'^(~je_dh_sk*kdf(<\'DH\', ~passphrase>)),',
+    '!KU( sign(<\'signature\', j_sig_pk, \'g\'^~x>, ~ltk) )',
     '!KU( kdf(<\'g\'^(~x*kdf(<\'DH\', ~passphrase>)),',
     '!KU( kdf(<\'g\'^(~je_dh_sk*kdf(<\'DH\', ~passphrase>)),',
     '!KU( senc(<\'msg_j2s\', ~msg, ',
