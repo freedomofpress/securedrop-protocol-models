@@ -245,6 +245,7 @@ rule Source_Send [color=#6495ED]:
     , Eq(verify(sig_je_pk, <'ephemeral', je_enc_pk>, j_sig_pk), true)
       // Actions for Lemmas
     , Source_Sent(s_enc_pk, j_sig_pk, j_fetch_pk, je_enc_pk, $NR, c, m)
+    , Encryption_OUT($Server, m)
     ]->
   [ Client_Out(~sess, $Server, <'ciphertext', <c, s_enc_pk, me_pk, m_gdh>>) ]
 
@@ -282,6 +283,7 @@ rule Journalist_Recv [derivchecks, color=#6495ED]:
   , !Ltk_Journalist_Fetch_Key($J, ~j_fetch_sk) ]
   --[ // Actions for Lemmas
       Journalist_Received(j_sig_pk, j_fetch_pk, je_enc_pk, $NR, s_enc_pk, c, m)
+    , Encryption_IN($Server, m)
     , Eq(fst(m), 'msg_s2j')
     , Eq(3rd(m), s_enc_pk)
     , Eq(5th(m), j_sig_pk)
@@ -308,6 +310,7 @@ rule Journalist_Send [color=#6495ED]:
   , Fr(~sess) ]
   --[ // Actions for Lemmas
       Journalist_Response(j_sig_pk, j_enc_pk, $NR, s_enc_pk, s_fetch_pk, m_old, c, m)
+    , Encryption_OUT($Server, m)
     ]->
   [ Client_Out(~sess, $Server, <'ciphertext', <c, j_enc_pk, me_pk, m_gdh>>) ]
 
@@ -353,6 +356,7 @@ rule Source_Recv [color=#6495ED, derivchecks]:
     , Eq(last9th(m), $NR)
       // Actions for Lemmas
     , Source_Received(s_enc_pk, s_fetch_pk, j_sig_pk, j_enc_pk, $NR, c, m)
+    , Encryption_IN($Server, m)
     ]->
   []
 
@@ -364,6 +368,12 @@ restriction DHElement_Check:
 
 restriction OnlyOnce:
   "All x #i #j. OnlyOnce(x)@#i & OnlyOnce(x)@#j ==> #i = #j"
+
+lemma Encryption [sources]:
+"All server m #t.
+        Encryption_IN(server, m) @ #t
+  ==>   (Ex #x. KU(m) @ #x & #x < #t)
+      | (Ex #x. Encryption_OUT(server, m) @ #x & #x < #t)"
 
 lemma Auto_Executability_Submission:
 exists-trace
