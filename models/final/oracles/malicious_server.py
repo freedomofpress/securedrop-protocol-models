@@ -26,7 +26,7 @@ def matchAgainstList(priorityList, lines):
       pass
 
 match = None
-if argv[1] in ['Auto_Executability_Submission', 'Auto_Executability_Journalist_Response']:
+if argv[1] in ['Auto_Executability_Submission', 'Executability_Journalist_Response']:
   match = matchAgainstList([
     re.compile(r'^(?!split).*')
   ], lines)
