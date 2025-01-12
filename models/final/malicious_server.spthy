@@ -301,7 +301,7 @@ restriction OnlyOnce:
   "All x #i #j. OnlyOnce(x)@#i & OnlyOnce(x)@#j ==> #i = #j"
 
 // not automatically verifiable
-lemma Executability_Submission:
+lemma Auto_Executability_Submission:
 exists-trace
 "Ex #t1 #t2 s_dh_pk j_sig_pk j_edh_pk j_ekem_pk nr m.
         Source_Sent(s_dh_pk, j_sig_pk, j_edh_pk, j_ekem_pk, nr, m) @ #t1

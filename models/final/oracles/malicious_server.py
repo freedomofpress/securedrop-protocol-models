@@ -26,7 +26,11 @@ def matchAgainstList(priorityList, lines):
       pass
 
 match = None
-if argv[1] in ['Auto_Secrecy_Source_Message']:
+if argv[1] in ['Auto_Executability_Submission', 'Auto_Executability_Journalist_Response']:
+  match = matchAgainstList([
+    re.compile(r'^(?!split).*')
+  ], lines)
+elif argv[1] in ['Auto_Secrecy_Source_Message']:
   match = matchAgainstList([
     '!Ltk_Source_Passphrase( $S, ~passphrase )',
     '!Pk_Newsroom( $NR, pk(x)',
