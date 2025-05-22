@@ -56,7 +56,7 @@ rule Register_Source_Passphrase [color=#FF7F50]:
       s_pke_sk = kdf(<'PKE', ~passphrase>)
       s_apke_sk = kdf(<'APKE', ~passphrase>)
       s_fetching_pk = 'g'^s_fetching_sk
-      s_pke_pk = pqpk(s_pke_sk)
+      s_pke_pk = pk(s_pke_sk)
       s_apke_pk = pqpk(s_apke_sk)
   in
   [ Fr(~passphrase) ]
@@ -139,7 +139,7 @@ rule Journalist_Enrollment [color=#FF7F50]:
 //   [ Out(~j_dh_sk) ]
 
 rule Journalist_Register_Ephemeral_Key [color=#FF7F50]:
-  let j_epke_pk = pqpk(~j_epke_sk)
+  let j_epke_pk = pk(~j_epke_sk)
       j_eapke_pk = pqpk(~j_eapke_sk)
       sig_je_pk = sign(<'ephemeral', j_epke_pk, j_eapke_pk>, ~j_sig_sk)
   in
