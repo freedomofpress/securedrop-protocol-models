@@ -1,6 +1,6 @@
 rule ClientOut[color=#FFFFFF]:
   [ Client_Out(~sess, $Server, msg), !SecureDropInstance($Server) ]
-  --[ ClientSent(msg) ]->
+  -->
   [ !Client(~sess, $Server, msg) ]
 
 rule ServerOut[color=#FFFFFF]:
@@ -20,7 +20,7 @@ rule ServerToClient[color=#FFFFFF]:
 
 rule AdversaryClientOut[color=#FF6961]:
   [ In(~sess), In(msg), !SecureDropInstance($Server) ]
-  -->
+  --[ Adversary_ClientSend(msg) ]->
   [ !Client(~sess, $Server, msg) ]
 
 rule ServerCompromise:
@@ -36,12 +36,13 @@ rule Snapshot:
 rule ServerToAdversaryClient[color=#FF6961]:
   [ In(adversarySess), !Server(adversarySess, $Server, msg) ]
   --[ AdversaryActivity()
-    , ServerSent(msg) ]->
+    , ServerSources(msg) ]->
   [ Out(msg) ]
 
 rule ServerAdversaryFromClient[color=#FF6961]:
-  [ !Client(~sess, $Server, msg), !PassiveCompromise($Server) ]
-  --[ AdversaryActivity() ]->
+  [ !Client(~sess, $Server, msg), !ActiveCompromise($Server) ]
+  --[ AdversaryActivity()
+    , ClientSources(msg) ]->
   [ Out(msg) ]
 
 rule ServerAdversaryToClient[color=#FF6961]:

@@ -3,7 +3,7 @@ begin
 
 builtins: symmetric-encryption, diffie-hellman, signing
 
-// heuristic: o "./oracles/malicious_server.py"
+heuristic: o "./oracles/oracle.py"
 
 functions: kdf/1, pqpk/1, bot/0
 #include "parts/apke.spthy"
@@ -194,18 +194,18 @@ rule Source_Send [color=#6495ED]:
   [ !Ltk_Source($S, s_fetching_sk, s_pke_sk, s_apke_sk)
   , !Pk_Newsroom($NR, nr_pk)
   , In(<j_sig_pk, j_fetching_pk, j_apke_pk, sig_j_pk, j_epke_pk, j_eapke_pk, sig_je_pk>)
-  , Fr(~sess), Fr(~x), Fr(~msg) ]
+  , Fr(~sess), Fr(~x), Fr(~msg), Fr(~id) ]
   --[
       // check signatures of journalist's longterm signature and ephemeral encryption keys
       Eq(verify(sig_j_pk, <'long-term', j_sig_pk, j_fetching_pk, j_apke_pk>, nr_pk), true)
     , Eq(verify(sig_je_pk, <'ephemeral', j_epke_pk, j_eapke_pk>, j_sig_pk), true)
       // Actions for Lemmas
     , Source_Sent(s_apke_pk, j_eapke_pk, $NR, ~msg)
-    , ClientSend(<'submission', ct1, ct2, ct3, ct4>)
+    , Submitted(<ct1, ct2, ct3, ct4>)
     , Ciphertexts(<ct1, ct2>)
     , PrePQAttack()
     ]->
-  [ Client_Out(~sess, $NR, <'submission', ct1, ct2, ct3, ct4>)
+  [ !Submission($NR, ~id, <ct1, ct2, ct3, ct4>)
   , !MessageSpace(pt)
   , !NonPQSecKey(~x) ]
 
@@ -214,7 +214,7 @@ rule Source_Query [color=#6495ED]:
   [ !Ltk_Source($S, s_fetching_sk, s_pke_sk, s_apke_sk)
   , !Pk_Newsroom($NR, nr_pk)
   , Fr(~sess) ]
-  --[ ClientSend('request') ]->
+  -->
   [ Client_Out(~sess, $NR, 'request')
   , SourceQueried($S, $NR, ~sess, s_fetching_sk) ]
 
@@ -224,7 +224,7 @@ rule Source_ChallengeResponse [color=#6495ED]:
   [ SourceQueried($S, $NR, ~sess, s_fetching_sk)
   , Client_In(~sess, $NR, <challenge_key, senc(id, challenge_key^s_fetching_sk)>) ]
   -->
-  [ Client_Out(~sess, $NR, <'response', id>)
+  [ Client_Out(~sess, $NR, id)
   , SourceResponded($S, $NR, ~sess) ]
 
 rule Source_Recv [color=#6495ED]:
@@ -258,7 +258,7 @@ rule Journalist_ChallengeResponse [color=#6495ED]:
   , !Ltk_Journalist_FETCHING_Key($J, ~j_fetching_sk)
   , Client_In(~sess, $NR, <challenge_key, senc(id, challenge_key^~j_fetching_sk)>) ]
   -->
-  [ Client_Out(~sess, $NR, <'response', id>)
+  [ Client_Out(~sess, $NR, id)
   , JournalistResponded($J, $NR, ~sess) ]
 
 rule Journalist_Recv [color=#6495ED,derivchecks]:
@@ -289,64 +289,97 @@ rule Journalist_Send [color=#6495ED]:
   [ Journalist_Recv($J, s_fetching_pk, s_pke_pk, s_apke_pk)
   , !Journalist_Enrolled($NR, $J)
   , !Ltk_Journalist_APKE_Key($J, ~j_apke_sk)
-  , Fr(~sess), Fr(~msg), Fr(~x) ]
-  --[ ClientSend(<'submission', ct1, '0x0', ct3, ct4>)
+  , Fr(~sess), Fr(~msg), Fr(~x), Fr(~id) ]
+  --[ Submitted(<ct1, '0x0', ct3, ct4>)
     , Ciphertexts(<ct1, '0x0'>)
       // Actions for Lemmas
     , Journalist_Sent($J, $NR, s_apke_pk, ~msg)
     , PrePQAttack()
     ]->
-  [ Client_Out(~sess, $NR, <'submission', ct1, '0x0', ct3, ct4>)
+  [ !Submission($NR, ~id, <ct1, '0x0', ct3, ct4>)
   , !APKE_MessageSpace(pt)
   , !NonPQSecKey(~x) ]
 
 // SECUREDROP INSTANCE
-
-rule ServerStore:
-  [ !SecureDropInstance($NR), Server_In(~sess, $NR, <ct1, ct2, ct3, ct4>) ]
-  -->
-  [ Ciphertext($NR, ct1, ct2, ct3, ct4)
-  , !Challenge($NR, ct3, ct4) ]
 
 rule ServerChallenge:
   let pk = 'g'^k1
       ss = 'g'^k2
   in
   [ Server_In(~sess, $NR, 'request')
-  , !Challenge($NR, ss, pk), Fr(~r), Fr(~id) ]
-  --[ ServerSend(<'challenge', pk^~r, senc(~id, ss^~r)>)
-    , SendChallenge(~id) ]->
-  [ Server_Out(~sess, $NR, <'challenge', pk^~r, senc(~id, ss^~r)>)
-  , Challenged($NR, ~sess, ~id, ss, pk) ]
+  , !Submission($NR, ~id, <ct1, ct2, ss, pk>)
+  , Fr(~r), Fr(~chall) ]
+  --[ ServerSend(<pk^~r, senc(~chall, ss^~r)>)
+    , SubmissionChallenge(~id)
+    , SendChallenge(~chall) ]->
+  [ Server_Out(~sess, $NR, <pk^~r, senc(~chall, ss^~r)>)
+  , Challenged($NR, ~sess, ~id, ~chall, ct1, ct2) ]
 
 rule ServerChallengeSuccess:
-  [ Challenged($NR, ~sess, ~id, ss, pk), Ciphertext($NR, ct1, ct2, ss, pk)
-  , Server_In(~sess, $NR, ~id) ]
+  [ Challenged($NR, ~sess, ~id, ~chall, ct1, ct2)
+  , Server_In(~sess, $NR, ~chall) ]
+  --[ Fetched(~id) ]->
+  [ Server_Out(~sess, $NR, <ct1, ct2>) ]
+
+rule AdversarySubmit:
+  [ In(cts), Fr(~id) ]
   -->
-  [ Server_Out(~sess, $NR, <'ciphertexts', ct1, ct2>) ]
+  [ !Submission($NR, ~id, cts) ]
+
+rule SubmissionAccess:
+  [ !PassiveCompromise($NR), !Submission($NR, ~id, cts) ]
+  --[ CiphertextAccess(cts) ]->
+  [ Out(cts) ]
 
 // RESTRICTIONS AND LEMMAS
 
+restriction UniqueFetch:
+  "All id #t1 #t2. Fetched(id) @ #t1 & Fetched(id) @ #t2 ==> #t1 = #t2"
+
+restriction ChallengeBeforeFetch:
+  "All id #t1 #t2. Fetched(id) @ #t1 & SubmissionChallenge(id) @ #t2 ==> #t2 < #t1"
+
+lemma Submissions[sources]:
+  "All cts #t. CiphertextAccess(cts) @ #t
+    ==>   (Ex #x. Submitted(cts) @ #x)
+        | (Ex #x. KU(cts) @ #x & #x < #t)"
+
 lemma SecureChannelClientSources[sources]:
-  "All tag m #t. ClientSent(<tag, m>) @ #t
-    ==>   (tag = 'response' &
-            ( (Ex #x. SendChallenge(m) @ #x)
-            | (Ex #x. KU(m) @ #x & #x < #t)))
-        | (not tag = 'response' &
-            ( (Ex #x. ClientSend(<tag, m>) @ #x)
-            | Ex #x. KU(m) @ #x & #x < #t))"
+  "All m #t. ClientSources(m) @ #t ==>
+      (m = 'request')
+    | (Ex #x. SendChallenge(m) @ #x)
+    | (Ex #x. KU(m) @ #x & #x < #t)"
 
 lemma SecureChannelServerSources[sources]:
-  "All tag m #t. ServerSent(<tag, m>) @ #t
-    ==>   (tag = 'ciphertexts' &
-            ( (Ex #x. Ciphertexts(m) @ #x)
-            | (Ex #x. KU(m) @ #x & #x < #t)
-            | (Ex ct1 ct2 #x1 #x2. m = <ct1, ct2>
-                & KU(ct1) @ #x1 & KU(ct2) @ #x2
-                & #x1 < #t & #x2 < #t)))
-        | (not tag = 'ciphertexts' &
-            ( (Ex #x. ServerSend(<tag, m>) @ #x)
-            | (Ex #x. KU(m) @ #x & #x < #t)))"
+  "All m #t. ServerSources(m) @ #t ==>
+    | (Ex #x. ServerSend(m) @ #x)
+    | (Ex #x. Ciphertexts(m) @ #x)
+    | (Ex #x. KU(m) @ #x & #x < #t)"
+
+// lemma FalseSources2[sources]:
+//   "All m #t. ServerSent(m) @ #t ==> Ex #x. KU(m) @ #x & #x < #t"
+
+// lemma SecureChannelClientSources[sources]:
+//   "All tag m #t. ClientSent(<tag, m>) @ #t
+//     ==>   (tag = 'response' &
+//             ( (Ex #x. SendChallenge(m) @ #x)
+//             | (Ex #x. KU(m) @ #x & #x < #t)))
+//         | (not tag = 'response' &
+//             ( (Ex #x. ClientSend(<tag, m>) @ #x)
+//             | Ex #x. KU(m) @ #x & #x < #t))"
+
+// lemma SecureChannelServerSources[sources]:
+//   "All tag m #t. ServerSent(<tag, m>) @ #t & tag = 'ciphertexts'
+//     ==>   //(tag = 'ciphertexts' &
+//             ( (Ex #x. Ciphertexts(m) @ #x)
+//             | (Ex #x. KU(m) @ #x & #x < #t)
+//             | (Ex ct1 ct2 #x1 #x2. m = <ct1, ct2>
+//                 & KU(ct1) @ #x1 & KU(ct2) @ #x2
+//                 & #x1 < #t & #x2 < #t))"
+        //         )
+        // | (not tag = 'ciphertexts' &
+        //     ( (Ex #x. ServerSend(<tag, m>) @ #x)
+        //     | (Ex #x. KU(m) @ #x & #x < #t)))"
 
 restriction Eq:
   "All t1 t2 #x. Eq(t1, t2) @ #x ==> t1 = t2"
