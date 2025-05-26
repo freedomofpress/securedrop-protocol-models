@@ -16,7 +16,7 @@ builtins: symmetric-encryption, diffie-hellman, signing
 heuristic: o "./oracles/oracle.py"
 
 functions: kdf/1, bot/0, APKE_Enc/4, APKE_Dec/3, APKE_Vfy/2, PKE_Enc/2, PKE_Dec/2
-equations: APKE_Dec(APKE_Enc(skS, pk(skR1), pk(skR2), m), skR1, skr2) = m,
+equations: APKE_Dec(APKE_Enc(skS, pk(skR1), pk(skR2), m), skR1, skR2) = m,
   APKE_Vfy(APKE_Enc(skS, pkR1, pkR2, m), pk(skS)) = true,
   PKE_Dec(PKE_Enc(pk(skR), m), skR) = m
 
