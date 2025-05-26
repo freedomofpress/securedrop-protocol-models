@@ -319,9 +319,13 @@ rule AdversarySubmit:
   , FetchToken(~id) ]
 
 rule SubmissionAccess:
-  [ !PassiveCompromise($NR), !Submission($NR, ~id, cts), FetchToken(~id) ]
-  --[ SubmissionSources(cts) ]->
+  [ !PassiveCompromise($NR), !Submission($NR, ~id, cts) ]
+  --[ SubmissionSources(cts)
+    , DBRead(~id) ]->
   [ Out(cts) ]
+
+restriction SubmissionAccessTime:
+  "All id #t1 #t2. DBRead(id) @ #t1 & Fetched(id) @ #t2 ==> #t1 < #t2"
 
 // RESTRICTIONS AND LEMMAS
 
