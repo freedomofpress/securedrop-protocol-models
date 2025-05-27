@@ -205,10 +205,11 @@ rule Source_Query[color=#58a820]:
   , SourceQueried($S, $NR, ~sess, ~s_fetching_sk) ]
 
 rule Source_ChallengeResponse[color=#58a820]:
-  let challenge_key = 'g'^k
+  let challenge_pc = 'g'^k
+      challenge_key = kdf(<$NR, challenge_pc^~s_fetching_sk>)
   in
   [ SourceQueried($S, $NR, ~sess, ~s_fetching_sk)
-  , Client_In(~sess, $NR, <challenge_key, senc(id, challenge_key^~s_fetching_sk)>) ]
+  , Client_In(~sess, $NR, <challenge_pc, senc(id, challenge_key)>) ]
   --[ PrePQAttack() ]->
   [ Client_Out(~sess, $NR, id)
   , SourceResponded($S, $NR, ~sess) ]
@@ -241,9 +242,12 @@ rule Journalist_Query[color=#0a0aff]:
   , JournalistQueried($J, $NR, ~sess) ]
 
 rule Journalist_ChallengeResponse[color=#0a0aff]:
+  let challenge_pc = 'g'^k
+      challenge_key = kdf(<$NR, challenge_pc^~j_fetching_sk>)
+  in
   [ JournalistQueried($J, $NR, ~sess)
   , !Ltk_Journalist_FETCHING_Key($J, ~j_fetching_sk)
-  , Client_In(~sess, $NR, <challenge_key, senc(id, challenge_key^~j_fetching_sk)>) ]
+  , Client_In(~sess, $NR, <challenge_pc, senc(id, challenge_key)>) ]
   --[ PrePQAttack() ]->
   [ Client_Out(~sess, $NR, id)
   , JournalistResponded($J, $NR, ~sess) ]
@@ -291,14 +295,15 @@ rule Journalist_Send[color=#0a0aff]:
 rule ServerChallenge[color=#c24bb8]:
   let pk = 'g'^k1
       ss = 'g'^k2
+      challenge = senc(~chall, kdf(<$NR, ss^~r>))
   in
   [ Server_In(~sess, $NR, 'request')
   , !Submission($NR, ~id, <ct1, ct2, ss, pk>)
   , Fr(~r), Fr(~chall) ]
-  --[ ServerSource(<pk^~r, senc(~chall, ss^~r)>)
+  --[ ServerSource(<pk^~r, challenge>)
     , ClientSource(~chall)
     , PrePQAttack() ]->
-  [ Server_Out(~sess, $NR, <pk^~r, senc(~chall, ss^~r)>)
+  [ Server_Out(~sess, $NR, <pk^~r, challenge>)
   , Challenged($NR, ~sess, ~id, ~chall, ct1, ct2) ]
 
 rule ServerChallengeSuccess[color=#c24bb8]:
