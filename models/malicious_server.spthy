@@ -25,7 +25,8 @@ rule Register_Newsroom_Key[color=#ffee00]:
   let public_key = pk(~ltk) in
   [ Fr(~ltk) ]
   --[ PrePQAttack()
-    , OnlyOnce($NR) ]->
+    , OnlyOnce($NR)
+    , Honest(public_key) ]->
   [ !SecureDropInstance($NR)
   , !Ltk_Newsroom($NR, ~ltk)
   , !Pk_Newsroom($NR, public_key)
@@ -89,6 +90,7 @@ rule Journalist_Enrollment[color=#ffee00]:
   , Fr(~j_fetching_sk)
   , Fr(~j_apke_sk) ]
   --[ Journalist_Verified($NR, $J)
+    , Honest(j_sig_pk)
     , Honest(j_apke_pk)
     , OnlyOnce($J)
     , PrePQAttack() ]->
@@ -211,7 +213,6 @@ rule Source_ChallengeResponse[color=#58a820]:
 
 rule Source_Recv[color=#58a820]:
   let pt1 = <'submission', m>
-      ct1 = APKE_Enc(skR, pk(~s_apke_sk), pk(~s_pke_sk), pt1)
   in
   [ SourceResponded($S, $NR, ~sess)
   , Client_In(~sess, $NR, <ct1, ct2>)
