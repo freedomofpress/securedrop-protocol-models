@@ -7,9 +7,6 @@ equations: PKE_Dec_Adversary(PKE_Enc(pk(skR), m), skR) = m
 rule PKE_MessageSpaceAdversary:
   [ In(m) ] --> [ !PKE_MessageSpace(m) ]
 
-rule PKE_MessageSpaceReject:
-  [] --> [ !PKE_MessageSpace(bot) ]
-
 restriction PKE_Consistency:
   "All ct skR pt1 pt2 #t1 #t2.
           PKE_Dec(ct, skR, pt1) @ #t1

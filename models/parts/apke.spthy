@@ -1,14 +1,11 @@
 // Restriction-based model of authenticated encryption
-functions: APKE_Enc/4, APKE_Dec_Adversary/5
+functions: APKE_Enc/4, APKE_Dec_Adversary/4
 
 // This rule is for the adversary, honest clients will use restrictions as per below
-equations: APKE_Dec_Adversary(APKE_Enc(skS, pk(skR), m), x, skR) = m
+equations: APKE_Dec_Adversary(APKE_Enc(skS, pk(skR1), pk(skR2), m), x, skR1, skR2) = m
 
 rule APKE_MessageSpaceAdversary:
   [ In(m) ] --> [ !APKE_MessageSpace(m) ]
-
-rule APKE_MessageSpaceReject:
-  [] --> [ !APKE_MessageSpace(bot) ]
 
 restriction APKE_Consistency:
   "All ct pkS skR1 skR2 pt1 pt2 #t1 #t2.
