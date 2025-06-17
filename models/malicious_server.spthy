@@ -318,7 +318,7 @@ lemma FetchingSecrecy[reuse]:
   "All pk ct1 ct2 #t.
           FetchStart(pk, ct1, ct2) @ #t
     ==>   (not Ex #x #y. !KU(ct1) @ #x & !KU(ct2) @ #y)
-        | (Ex #x #y. !KU(ct1) @ #x & !KU(ct2) @ #y & #x < #t & #y #t)
+        | (Ex #x #y. !KU(ct1) @ #x & !KU(ct2) @ #y & #x < #t & #y < #t)
         | (Ex #x. Reveal_Source_Fetching(pk) @ #x)
         | (Ex #x. Reveal_Journalist_Fetching(pk) @ #x)"
 
