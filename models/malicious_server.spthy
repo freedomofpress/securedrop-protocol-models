@@ -47,6 +47,7 @@ rule Register_Source_Passphrase[color=#ffee00]:
   [ Fr(~s_fetching_sk), Fr(~s_pke_sk), Fr(~s_apke_sk) ]
   --[ Honest(s_pke_pk)
     , Honest(s_apke_pk)
+    , Source(pk(~s_apke_sk))
     , PrePQAttack() ]->
   [ !Ltk_Source($A, ~s_fetching_sk, ~s_pke_sk, ~s_apke_sk)
   , !NonPQSecKey(~s_fetching_sk)
@@ -73,7 +74,7 @@ rule Reveal_Source_APKE[color=#ff6961]:
   let s_apke_pk = pk(~s_apke_sk)
   in
   [ !Ltk_Source($A, ~s_fetching_sk, ~s_pke_sk, ~s_apke_sk) ]
-  --[ Reveal_Source_KEM(s_apke_pk)
+  --[ Reveal_Source_APKE(s_apke_pk)
     , AdversaryActivity() ]->
   [ Out(~s_apke_sk) ]
 
@@ -367,9 +368,9 @@ restriction OnlyOnce:
 // not automatically verifiable
 lemma Executability_Source_Submission:
 exists-trace
-"Ex #t1 #t2 id s_apke_pk j_eapke_pk nr m.
-        SourceSubmission(id, s_apke_pk, j_eapke_pk, nr, m) @ #t1
-      & Journalist_Received(j_eapke_pk, nr, s_apke_pk, m) @ #t2
+"Ex #t1 #t2 id s_apke_pk j_sig_pk nr m.
+        SourceSubmission(id, s_apke_pk, j_sig_pk, nr, m) @ #t1
+      & Journalist_Received(j_sig_pk, nr, s_apke_pk, m) @ #t2
       & (not Ex #x. AdversaryActivity() @ #x)"
 
 lemma Executability_Journalist_Response:
@@ -381,6 +382,20 @@ exists-trace
 
 lemma SessionSecrecy[reuse]:
   "All sess #a #b. ClientSession(sess) @ #a & !KU(sess) @ #b ==> F"
+
+lemma Source_Authentication[reuse]:
+  "All j_sig_pk nr s_pk m #t1 #t2.
+        ( Journalist_Received(j_sig_pk, nr, s_pk, m) @ #t1
+        & Source(s_pk) @ #t2)
+    ==>   (Ex id #x. SourceSubmission(id, s_pk, j_sig_pk, nr, m) @ #x & #x < #t1)
+        | (Ex #x. Reveal_Source_APKE(s_pk) @ #x & #x < #t1)"
+
+lemma Journalist_Authentication[reuse]:
+  "All j_pk nr s_pk m #t.
+        Source_Received(s_pk, j_pk, nr, m) @ #t
+    ==>   (Ex #x. Journalist_Sent(j_pk, nr, s_pk, m) @ #x & #x < #t)
+        | (Ex #x. Reveal_Journalist_APKE(j_pk) @ #x & #x < #t)
+        | (Ex #x. Reveal_Newsroom_Key(nr) @ #x & #x < #t)"
 
 lemma FetchingSecrecy[reuse]:
   "All nr pk ct1 ct2 #t.

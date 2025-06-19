@@ -75,6 +75,11 @@ elif argv[1] == 'SourceSubmission_Secrecy':
     # re.compile(r'!KU\( senc.+\) @ #vk\.\d+'),
     # re.compile(r'Client_In\(.+\) ▶. #vr\.23'),
   ], lines)
+elif argv[1] == 'Source_Authentication':
+  match = matchAgainstList([
+    re.compile(r'!Submission\(.+\'g\','),
+    re.compile(r'!Submission\(.+\'g\'>'),
+  ], lines)
 
 if match is not None:
   print(match)
