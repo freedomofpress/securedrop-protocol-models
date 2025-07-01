@@ -14,14 +14,8 @@ restriction PKE_Consistency:
     ==> pt1 = pt2"
 
 restriction PKE_Correctness:
-  "All skR mEnc mDec #t1 #t2.
-          PKE_Dec(PKE_Enc(pk(skR), mEnc), skR, mDec) @ #t1
-        & Honest(pk(skR)) @ #t2
-    ==> mDec = mEnc"
-
-restriction PKE_Authentication:
   "All ct skR mDec #t1 #t2.
           PKE_Dec(ct, skR, mDec) @ #t1
         & Honest(pk(skR)) @ #t2
-    ==>   (ct = PKE_Enc(pk(skR), mDec))
-        | (mDec = bot)"
+    ==> ( (ct = PKE_Enc(pk(skR), mDec))
+        | (mDec = bot & not (ct = PKE_Enc(pk(skR), mDec))))"

@@ -14,18 +14,10 @@ restriction APKE_Consistency:
     ==> pt1 = pt2"
 
 restriction APKE_Correctness:
-  "All skS skR1 skR2 mEnc mDec #t1 #t2 #t3 #t4.
-          APKE_Dec(APKE_Enc(skS, pk(skR1), pk(skR2), mEnc), pk(skS), skR1, skR2, mDec) @ #t1
-        & Honest(pk(skS)) @ #t2
-        & Honest(pk(skR1)) @ #t3
-        & Honest(pk(skR2)) @ #t4
-    ==> mDec = mEnc"
-
-restriction APKE_Security:
   "All ct skAuth skDec1 skDec2 mDec #t1 #t2 #t3 #t4.
           APKE_Dec(ct, pk(skAuth), skDec1, skDec2, mDec) @ #t1
         & Honest(pk(skAuth)) @ #t2
         & Honest(pk(skDec1)) @ #t3
         & Honest(pk(skDec2)) @ #t4
     ==> ( (ct = APKE_Enc(skAuth, pk(skDec1), pk(skDec2), mDec))
-        | (mDec = bot))"
+        | (mDec = bot & not (ct = APKE_Enc(skAuth, pk(skDec1), pk(skDec2), mDec))))"
