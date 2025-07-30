@@ -36,22 +36,46 @@ if argv[1] == 'SecureChannelSources':
     '!Submission',
     'KU( senc',
   ], lines)
-elif argv[1] == 'FetchingSecrecy':
+elif argv[1] == 'FetchingSharedSecretSecrecySourceSubmission':
+  match = matchAgainstList([
+    re.compile(r'!Submission\(.+\'g\'(,|>)'),
+    '!KU( ~r',
+    '!KU( ~j',
+    '!KU( ~x',
+    '!KU( ~ltk',
+    '!Submission',
+    '!KU( sign(<\'long-term\', pk(x), j_fetch_pk, j_apke_pk>, ~ltk)',
+    '!KU( \'g\'^(~j_fetching_sk*~r*~x) ) @ #t3',
+    'splitEqs(3)',
+  ], lines)
+elif argv[1] == 'FetchingSharedSecretSecrecyJournalistSubmission':
+  match = matchAgainstList([
+    '(∃ id #x.   (SourceSubmission',
+    '!KU( ~r',
+    '!KU( ~s_',
+    '!KU( ~x',
+    'splitEqs(13)',
+    '!Submission',
+    '!KU( \'g\'^(~r*~s_fetching_sk*~x) ) @ #t4',
+  ], lines)
+elif argv[1] == 'FetchingChallengeSecrecy':
   lines.reverse()
   match = matchAgainstList([
-    'Honest( \'g\' )',
-    re.compile(r'!Submission\(.+\'g\','),
-    re.compile(r'!Submission\(.+\'g\'>'),
-
-    re.compile(r'KU\( ~(r|x|(j|s)_fetching_sk)\.?\d* \)'),
-    re.compile(r'\'g\'\^\(~[\w\d_\.]+\*~[\w\d_\.]+\*~[\w\d_\.]+\)'),
-    re.compile(r'!Submission\(.+\) ▶₁ #t'),
-    '!KU( ~chall )',
-    re.compile(r'!Submission\(.*senc\(~chall\.?\d*, kdf\(<\$Server\.?\d*,.*\)'),
-    '!KU( senc(~chall',
-    'splitEqs(10)',
-    'Honest',
+    'senc(~chall,',
     re.compile(r'Client_Out\(.+~chall'),
+
+    # 'Honest( \'g\' )',
+    # re.compile(r'!Submission\(.+\'g\','),
+    # re.compile(r'!Submission\(.+\'g\'>'),
+
+    # re.compile(r'KU\( ~(r|x|(j|s)_fetching_sk)\.?\d* \)'),
+    # re.compile(r'\'g\'\^\(~[\w\d_\.]+\*~[\w\d_\.]+\*~[\w\d_\.]+\)'),
+    # re.compile(r'!Submission\(.+\) ▶₁ #t'),
+    # '!KU( ~chall )',
+    # re.compile(r'!Submission\(.*senc\(~chall\.?\d*, kdf\(<\$Server\.?\d*,.*\)'),
+    # '!KU( senc(~chall',
+    # 'splitEqs(10)',
+    # 'Honest',
   ], lines)
 elif argv[1] == 'SourceSubmission_Secrecy':
   match = matchAgainstList([
