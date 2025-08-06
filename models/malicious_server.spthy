@@ -26,6 +26,7 @@ rule Register_Newsroom_Key[color=#ffee00]:
   [ Fr(~ltk) ]
   --[ PrePQAttack()
     , OnlyOnce($NR)
+    , IsNewsroomKey($NR, ~ltk)
     , Honest(public_key) ]->
   [ !SecureDropInstance($NR)
   , !Ltk_Newsroom($NR, ~ltk)
@@ -39,6 +40,11 @@ rule Reveal_Newsroom_Key[color=#ff6961]:
     , AdversaryActivity() ]->
   [ Out(~ltk) ]
 
+lemma NewsroomKeySecrecy[reuse]:
+  "All nr k #t1 #t2. IsNewsroomKey(nr, k) @ #t1 & !KU(k) @ #t2
+    ==>   (Ex #x. Reveal_Newsroom_Key(nr) @ #x & #x < #t2)
+        | (Ex #x. PQAttack() @ #x & #x < #t2)"
+
 rule Register_Source_Passphrase[color=#ffee00]:
   let s_fetching_pk = 'g'^~s_fetching_sk
       s_pke_pk = pk(~s_pke_sk)
@@ -48,6 +54,9 @@ rule Register_Source_Passphrase[color=#ffee00]:
   --[ Honest(s_fetching_pk)
     , Honest(s_pke_pk)
     , Honest(s_apke_pk)
+    , IsSourceFetchingKey(~s_fetching_sk, s_fetching_pk)
+    , IsSourcePKEKey(~s_pke_sk)
+    , IsSourceAPKEKey(~s_apke_sk)
     , Source(pk(~s_apke_sk))
     , PrePQAttack() ]->
   [ !Ltk_Source($A, ~s_fetching_sk, ~s_pke_sk, ~s_apke_sk)
@@ -77,6 +86,20 @@ rule Reveal_Source_APKE[color=#ff6961]:
     , AdversaryActivity() ]->
   [ Out(~s_apke_sk) ]
 
+lemma SourceFetchingKeySecrecy[reuse]:
+  "All k pc #t1 #t2. IsSourceFetchingKey(k, pc) @ #t1 & !KU(k) @ #t2
+    ==>   (Ex #x. Reveal_Source_Fetching(pc) @ #x & #x < #t2)
+        | (Ex #x. PQAttack() @ #x & #x < #t2)"
+
+lemma SourcePKEKeySecrecy[reuse]:
+  "All k #t1 #t2. IsSourcePKEKey(k) @ #t1 & !KU(k) @ #t2
+    ==>   (Ex #x. Reveal_Source_PKE(pk(k)) @ #x & #x < #t2)
+        | (Ex #x. PQAttack() @ #x & #x < #t2)"
+
+lemma SourceAPKEKeySecrecy[reuse]:
+  "All k #t1 #t2. IsSourceAPKEKey(k) @ #t1 & !KU(k) @ #t2
+    ==> (Ex #x. Reveal_Source_APKE(pk(k)) @ #x & #x < #t2)"
+
 // Journalist Enrollment
 
 rule Journalist_Enrollment[color=#ffee00]:
@@ -93,6 +116,9 @@ rule Journalist_Enrollment[color=#ffee00]:
     , Honest(j_fetching_pk)
     , Honest(j_sig_pk)
     , Honest(j_apke_pk)
+    , IsJournalistFetchingKey(~j_fetching_sk, j_fetching_pk)
+    , IsJournalistSIGKey(~j_sig_sk)
+    , IsJournalistAPKEKey(~j_apke_sk)
     , OnlyOnce($J)
     , PrePQAttack() ]->
   [ Out(<j_sig_pk, j_fetching_pk, j_apke_pk, sig_j_pk>)
@@ -125,6 +151,20 @@ rule Reveal_Journalist_APKE[color=#ff6961]:
     , AdversaryActivity() ]->
   [ Out(~j_apke_sk) ]
 
+lemma JournalistFetchingKeySecrecy[reuse]:
+  "All k pc #t1 #t2. IsJournalistFetchingKey(k, pc) @ #t1 & !KU(k) @ #t2
+    ==>   (Ex #x. Reveal_Journalist_Fetching(pc) @ #x & #x < #t2)
+        | (Ex #x. PQAttack() @ #x & #x < #t2)"
+
+lemma JournalistSIGKeySecrecy[reuse]:
+  "All k #t1 #t2. IsJournalistSIGKey(k) @ #t1 & !KU(k) @ #t2
+    ==>   (Ex #x. Reveal_Journalist_SIG(pk(k)) @ #x & #x < #t2)
+        | (Ex #x. PQAttack() @ #x & #x < #t2)"
+
+lemma JournalistAPKEKeySecrecy[reuse]:
+  "All k #t1 #t2. IsJournalistAPKEKey(k) @ #t1 & !KU(k) @ #t2
+    ==> (Ex #x. Reveal_Journalist_APKE(pk(k)) @ #x & #x < #t2)"
+
 rule Journalist_Register_Ephemeral_Key[color=#ffee00]:
   let j_epke_pk = pk(~j_epke_sk)
       j_eapke_pk = pk(~j_eapke_sk)
@@ -135,6 +175,8 @@ rule Journalist_Register_Ephemeral_Key[color=#ffee00]:
   , Fr(~j_eapke_sk) ]
   --[ Honest(j_epke_pk)
     , Honest(j_eapke_pk)
+    , IsJournalistEPKEKey(~j_epke_sk)
+    , IsJournalistEAPKEKey(~j_eapke_sk)
     , PrePQAttack() ]->
   [ Out(<j_epke_pk, j_eapke_pk, sig_je_pk>)
   , Journalist_Ephemeral_Key($J, ~j_epke_sk, ~j_eapke_sk)
@@ -156,6 +198,15 @@ rule Reveal_Journalist_EAPKE[color=#ff6961]:
   --[ Reveal_Journalist_EAPKE(j_apke_pk)
     , AdversaryActivity() ]->
   [ Out(~j_eapke_sk) ]
+
+lemma JournalistEPKEKeySecrecy[reuse]:
+  "All k #t1 #t2. IsJournalistEPKEKey(k) @ #t1 & !KU(k) @ #t2
+    ==>   (Ex #x. Reveal_Journalist_EPKE(pk(k)) @ #x & #x < #t2)
+        | (Ex #x. PQAttack() @ #x & #x < #t2)"
+
+lemma JournalistEAPKEKeySecrecy[reuse]:
+  "All k #t1 #t2. IsJournalistEAPKEKey(k) @ #t1 & !KU(k) @ #t2
+    ==> (Ex #x. Reveal_Journalist_EAPKE(pk(k)) @ #x & #x < #t2)"
 
 // SOURCE MODEL
 // Sending
@@ -185,6 +236,7 @@ rule Source_Send[color=#58a820]:
     , ServerSource(<ct1, ct2>)
     , ClientSession(~sess)
     , SourceSubmissionFor(~id, j_fetching_pk)
+    , ClassicSecret(~x)
     , PrePQAttack()
     ]->
   [ !Submission($NR, ~id, <ct1, ct2, ct3, ct4>)
@@ -298,6 +350,7 @@ rule Journalist_Send[color=#0a0aff]:
     , Journalist_Sent(pk(~j_apke_sk), $NR, s_apke_pk, ~msg)
     , ClientSession(~sess)
     , JournalistSubmissionFor(~id, j_eapke_pk, s_apke_pk, s_fetching_pk)
+    , ClassicSecret(~x)
     , PrePQAttack()
     ]->
   [ !Submission($NR, ~id, <ct1, ct2, ct3, ct4>)
@@ -319,6 +372,7 @@ rule ServerChallenge[color=#c24bb8]:
   --[ ServerSource(<pk^~r, challenge>)
     , ClientSource(~chall)
     , FetchStart(~id, $NR, ss^~r, ~chall)
+    , ClassicSecret(~r)
     , PrePQAttack() ]->
   [ Server_Out(~sess, $NR, <pk^~r, challenge>)
   , Challenged($NR, ~sess, ~id, ~chall, ct1, ct2) ]
@@ -390,6 +444,9 @@ exists-trace
 
 lemma SessionSecrecy[reuse]:
   "All sess #a #b. ClientSession(sess) @ #a & !KU(sess) @ #b ==> F"
+
+lemma EphemeralDHSecrecy[reuse]:
+  "All x #t1 #t2. ClassicSecret(x) @ #t1 & !KU(x) @ #t2 ==> (Ex #x. PQAttack() @ #x & #x < #t2)"
 
 lemma Source_Authentication[reuse]:
   "All j_sig_pk j_eapke_pk nr s_fetch_pk s_pk m #t1 #t2.
