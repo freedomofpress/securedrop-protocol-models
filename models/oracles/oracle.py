@@ -120,6 +120,10 @@ elif argv[1] == 'EphemeralDHSecrecy':
     'ClassicSecret',
     '!KU( ~x',
   ], lines)
+elif argv[1] == 'SubmissionEquality':
+  match = matchAgainstList([
+    'Submi',
+  ], lines)
 
 if match is not None:
   print(match)

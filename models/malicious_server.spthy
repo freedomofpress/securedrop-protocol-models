@@ -221,6 +221,7 @@ rule Source_Send[color=#58a820]:
       j_fetching_pk = 'g'^k
       ct3 = j_fetching_pk^~x
       ct4 = 'g'^~x
+      cts = <ct1, ct2, ct3, ct4>
   in
   [ !Ltk_Source($S, ~s_fetching_sk, ~s_pke_sk, ~s_apke_sk)
   , !Pk_Newsroom($NR, nr_pk)
@@ -233,14 +234,15 @@ rule Source_Send[color=#58a820]:
       // Actions for Lemmas
     , SourceSubmission(~id, s_fetching_pk, s_apke_pk, j_sig_pk, $NR, ~msg)
     , JournalistKeys(j_sig_pk, j_eapke_pk, j_epke_pk, j_fetching_pk)
-    , SubmissionSource(<ct1, ct2, ct3, ct4>)
+    , SubmissionSource(cts)
     , ServerSource(<ct1, ct2>)
     , ClientSession(~sess)
     , SourceSubmissionFor(~id, j_fetching_pk)
     , ClassicSecret(~x)
+    , Submit(~id, cts)
     , PrePQAttack()
     ]->
-  [ !Submission($NR, ~id, <ct1, ct2, ct3, ct4>)
+  [ !Submission($NR, ~id, cts)
   , FetchToken(~id)
   , !APKE_MessageSpace(pt1)
   , !PKE_MessageSpace(pt2)
@@ -340,6 +342,7 @@ rule Journalist_Send[color=#0a0aff]:
       ct2 = PKE_Enc(s_pke_pk, pt2)
       ct3 = s_fetching_pk^~x
       ct4 = 'g'^~x
+      cts = <ct1, ct2, ct3, ct4>
   in
   [ Journalist_Recv($J, j_eapke_pk, s_fetching_pk, s_pke_pk, s_apke_pk)
   , !Journalist_Enrolled($NR, $J)
@@ -352,9 +355,10 @@ rule Journalist_Send[color=#0a0aff]:
     , ClientSession(~sess)
     , JournalistSubmissionFor(~id, j_eapke_pk, s_apke_pk, s_fetching_pk)
     , ClassicSecret(~x)
+    , Submit(~id, cts)
     , PrePQAttack()
     ]->
-  [ !Submission($NR, ~id, <ct1, ct2, ct3, ct4>)
+  [ !Submission($NR, ~id, cts)
   , FetchToken(~id)
   , !APKE_MessageSpace(pt1)
   , !PKE_MessageSpace(pt2)
@@ -365,15 +369,17 @@ rule Journalist_Send[color=#0a0aff]:
 rule ServerChallenge[color=#c24bb8]:
   let pk = 'g'^k1
       ss = 'g'^k2
+      cts = <ct1, ct2, ss, pk>
       challenge = senc(~chall, kdf(<$NR, ss^~r>))
   in
   [ Server_In(~sess, $NR, 'request')
-  , !Submission($NR, ~id, <ct1, ct2, ss, pk>)
+  , !Submission($NR, ~id, cts)
   , Fr(~r), Fr(~chall) ]
   --[ ServerSource(<pk^~r, challenge>)
     , ClientSource(~chall)
     , FetchStart(~id, $NR, ss^~r, ~chall)
     , ClassicSecret(~r)
+    , IsSubmission(~id, cts)
     , PrePQAttack() ]->
   [ Server_Out(~sess, $NR, <pk^~r, challenge>)
   , Challenged($NR, ~sess, ~id, ~chall, ct1, ct2) ]
@@ -390,7 +396,8 @@ rule AdversarySubmit[color=#ff6961]:
   [ In(cts), Fr(~id) ]
   --[ Submitted(cts)
     , AdversaryActivity()
-    , AdversarySubmit(~id) ]->
+    , AdversarySubmit(~id)
+    , Submit(~id, cts) ]->
   [ !Submission($NR, ~id, cts)
   , FetchToken(~id) ]
 
@@ -398,6 +405,7 @@ rule SubmissionAccess[color=#ff6961]:
   [ !PassiveCompromise($NR), !Submission($NR, ~id, cts) ]
   --[ SubmissionSources(cts)
     , DBRead(~id)
+    , IsSubmission(~id, cts)
     , AdversaryActivity() ]->
   [ Out(cts) ]
 
@@ -464,6 +472,9 @@ lemma Journalist_Authentication[reuse]:
         | (Ex #x. Reveal_Journalist_APKE(j_pk) @ #x & #x < #t)
         | (Ex #x. Reveal_Source_APKE(s_pk) @ #x & #x < #t)
         | (Ex #x. Reveal_Newsroom_Key(nr) @ #x & #x < #t)"
+
+lemma SubmissionEquality[reuse]:
+  "All id cts1 cts2 #t1 #t2. IsSubmission(id, cts1) @ #t1 & Submit(id, cts2) @ #t2 ==> cts1 = cts2"
 
 // Auto-provable in 2345.66s (Tamarin server)
 lemma FetchingSharedSecretSecrecySourceSubmission[reuse]:
