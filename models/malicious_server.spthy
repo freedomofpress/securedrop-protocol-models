@@ -491,6 +491,7 @@ lemma FetchingSharedSecretSecrecySourceSubmission[reuse]:
     ==>   (Ex #x. Reveal_Journalist_Fetching(j_fetch_pk) @ #x & #x < #t2)
         | (Ex #x. Reveal_Newsroom_Key(nr) @ #x & #x < #t3)"
 
+// Auto-provable in 3648.20s (Tamarin server)
 lemma FetchingSharedSecretSecrecyJournalistSubmission[reuse]:
   "All id nr ss chall s_fetch_pk #t1 #t2 #t3 #t4 #t5.
         ( FetchStart(id, nr, ss, chall) @ #t1

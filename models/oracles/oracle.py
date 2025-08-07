@@ -51,16 +51,10 @@ elif argv[1] == 'FetchingSharedSecretSecrecySourceSubmission':
   ], lines)
 elif argv[1] == 'FetchingSharedSecretSecrecyJournalistSubmission':
   match = matchAgainstList([
+    re.compile(r'!Submission\(.+\'g\'(,|>)'),
     re.compile(r'∃.+Reveal'),
-    '!Ltk_Source',
-    'splitEqs(9)',
-    'splitEqs(8)',
-    '!KU( ~r',
-    '!KU( ~s_',
-    '!KU( ~x',
-    'splitEqs(13)',
-    re.compile(r'!Submission\(.+\) ▶. #t1'),
     '!KU( \'g\'^(~r*~s_fetching_sk*~x) ) @ #t5',
+    'splitEqs(4)',
   ], lines)
 elif argv[1] == 'FetchingChallengeSecrecy':
   match = matchAgainstList([
@@ -88,7 +82,7 @@ elif argv[1] == 'SourceSubmission_Secrecy':
 elif argv[1] == 'JournalistSubmission_Secrecy':
   match = matchAgainstList([
     '!JournalistEnrolled',
-    '!!Ltk_Journalist_APKE_Key',
+    '!Ltk_Journalist_APKE_Key',
     re.compile(r'!Submission\(.+\'g\'(,|>)'),
     # '!Submission',
     '!KU( ~msg',
@@ -96,6 +90,7 @@ elif argv[1] == 'JournalistSubmission_Secrecy':
     re.compile(r'Client_Out\(.+~chall'),
     '∀',
     '∃',
+    '!Submission',
   ], lines)
 elif argv[1] == 'Source_Authentication' or argv[1] == 'Journalist_Authentication':
   match = matchAgainstList([
