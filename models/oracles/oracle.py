@@ -84,13 +84,13 @@ elif argv[1] == 'JournalistSubmission_Secrecy':
     '!JournalistEnrolled',
     '!Ltk_Journalist_APKE_Key',
     re.compile(r'!Submission\(.+\'g\'(,|>)'),
-    # '!Submission',
-    '!KU( ~msg',
+    '!KU( ~msg )',
     'Fetched( ~id ) @ #x',
-    re.compile(r'Client_Out\(.+~chall'),
-    '∀',
-    '∃',
-    '!Submission',
+    re.compile(r'Client_Out\(.+~chall \)'),
+    re.compile(r'!Submission\( \$Server'),
+    '!Ltk_Source',
+    re.compile(r'^\(*∃'),
+    re.compile(r'^\(*∀'),
   ], lines)
 elif argv[1] == 'Source_Authentication' or argv[1] == 'Journalist_Authentication':
   match = matchAgainstList([
@@ -105,7 +105,7 @@ elif argv[1] == 'SessionSecrecy':
 elif argv[1] == 'EphemeralDHSecrecy':
   match = matchAgainstList([
     'ClassicSecret',
-    '!KU( ~x',
+    '!KU( ~',
   ], lines)
 elif argv[1] == 'SubmissionEquality':
   match = matchAgainstList([

@@ -439,7 +439,6 @@ restriction Eq:
 restriction OnlyOnce:
   "All x #i #j. OnlyOnce(x)@#i & OnlyOnce(x)@#j ==> #i = #j"
 
-// not automatically verifiable
 lemma Executability_Source_Submission:
 exists-trace
 "Ex #t1 #t2 id s_fetching_pk s_apke_pk j_sig_pk j_eapke_pk j_fetching_pk nr m.
@@ -476,7 +475,6 @@ lemma Journalist_Authentication[reuse]:
         | (Ex #x. Reveal_Source_APKE(s_apke_pk) @ #x & #x < #t)
         | (Ex #x. Reveal_Newsroom_Key(nr) @ #x & #x < #t)"
 
-// Auto-provable
 lemma SubmissionEquality[reuse]:
   "All id cts1 cts2 #t1 #t2. IsSubmission(id, cts1) @ #t1 & Submit(id, cts2) @ #t2 ==> cts1 = cts2"
 
@@ -502,7 +500,6 @@ lemma FetchingSharedSecretSecrecyJournalistSubmission[reuse]:
         & #t5 < #t2)
     ==>   (Ex #x. Reveal_Source_Fetching(s_fetch_pk) @ #x & #x < #t2)"
 
-// Auto-provable
 lemma FetchingChallengeSecrecy[reuse]:
   "All id nr ss chall #t1 #t2.
           FetchStart(id, nr, ss, chall) @ #t1
@@ -538,89 +535,5 @@ lemma JournalistSubmission_Secrecy[reuse]:
             | (Ex #x. SecureDropInstanceReadAccess(nr) @ #x)
             | (Ex #x. SecureDropInstanceCompromise(nr) @ #x))
           & (Ex #x. Reveal_Source_APKE(s_apke_pk) @ #x))"
-
-lemma Journalist_InjectiveReceived[reuse]:
-  "All  j_sig_pk1 j_eapke_pk1 j_fetching_pk1 nr1 s_fetch_pk1 s_apke_pk1 #t1
-        j_sig_pk2 j_eapke_pk2 j_fetching_pk2 nr2 s_fetch_pk2 s_apke_pk2 #t2
-        m #t3.
-        ( Journalist_Received(j_sig_pk1, j_eapke_pk1, j_fetching_pk1, nr1, s_fetch_pk1, s_apke_pk1, m) @ #t1
-        & Journalist_Received(j_sig_pk2, j_eapke_pk2, j_fetching_pk2, nr2, s_fetch_pk2, s_apke_pk2, m) @ #t2
-        & Source(s_apke_pk1) @ #t3)
-    ==>   (#t1 = #t2)
-        | (Ex #x. Reveal_Journalist_EAPKE(j_eapke_pk1) @ #x & #x < #t1)
-        | (Ex #x. Reveal_Source_APKE(s_apke_pk1) @ #x & #x < #t1)
-        | (Ex #x. Reveal_Newsroom_Key(nr1) @ #x & #x < #t1)
-        | (Ex #x. Reveal_Journalist_SIG(j_sig_pk1) @ #x & #x < #t1)
-        | ( ( (Ex #x. Reveal_Journalist_Fetching(j_fetching_pk1) @ #x)
-            | (Ex #x. SecureDropInstanceReadAccess(nr1) @ #x)
-            | (Ex #x. SecureDropInstanceCompromise(nr1) @ #x))
-          & (Ex #x. Reveal_Journalist_EAPKE(j_eapke_pk1) @ #x))"
-
-lemma Source_InjectiveReceived[reuse]:
-  "All  s_apke_pk1 s_fetch_pk1 j_sig_pk1 j_apke_pk1 nr1 #t1
-        s_apke_pk2 s_fetch_pk2 j_sig_pk2 j_apke_pk2 nr2 #t2
-        m.
-        ( Source_Received(s_apke_pk1, s_fetch_pk1, j_sig_pk1, j_apke_pk1, nr1, m) @ #t1
-        & Source_Received(s_apke_pk2, s_fetch_pk2, j_sig_pk2, j_apke_pk2, nr2, m) @ #t2)
-    ==>   (#t1 = #t2)
-        | (Ex #x. Reveal_Journalist_APKE(j_apke_pk1) @ #x & #x < #t1)
-        | (Ex #x. Reveal_Source_APKE(s_apke_pk1) @ #x & #x < #t1)
-        | (Ex #x. Reveal_Newsroom_Key(nr1) @ #x & #x < #t1)
-        | ( ( (Ex #x. Reveal_Source_Fetching(s_fetch_pk1) @ #x)
-            | (Ex #x. SecureDropInstanceReadAccess(nr1) @ #x)
-            | (Ex #x. SecureDropInstanceCompromise(nr1) @ #x))
-          & (Ex #x. Reveal_Journalist_APKE(j_apke_pk1) @ #x))"
-
-// lemma Auto_Secrecy_Source_Message:
-// "All #t s_dh_pk j_sig_pk j_edh_pk j_ekem_pk nr m.
-//         Source_Sent(s_dh_pk, j_sig_pk, j_edh_pk, j_ekem_pk, nr, m) @ #t
-//   ==>   (not Ex #x. K(m) @ #x)
-//       | (Ex #x. Reveal_Journalist_SIG_Key(j_sig_pk) @ #x & #x < #t)
-//       | (Ex #x. Reveal_Newsroom_Key(nr) @ #x & #x < #t)
-//       | (  (  (Ex #x. Reveal_Journalist_EDH_Key(j_edh_pk) @ #x)
-//             | (Ex #x. PQAttack() @ #x))
-//          & (Ex #x. Reveal_Journalist_EKEM_Key(j_ekem_pk) @ #x))"
-
-// lemma Auto_Injective_Agreement_Source_Message:
-// "All #t1 #t2 j_sig_pk j_edh_pk nr s_dh_pk m.
-//         Journalist_Received(j_sig_pk, j_edh_pk, nr, s_dh_pk, m) @ #t1
-//       & Register_Source(s_dh_pk) @ #t2
-//   ==>   (Ex j_ekem_pk #x1.
-//                 Source_Sent(s_dh_pk, j_sig_pk, j_edh_pk, j_ekem_pk, nr, m) @ #x1
-//               & #x1 < #t1
-//               & not (Ex j_sig_pk_2 j_edh_pk_2 nr_2 s_dh_pk_2 #x2.
-//                           Journalist_Received(j_sig_pk_2, j_edh_pk_2, nr_2, s_dh_pk_2, m) @ #x2
-//                         & not (#x2 = #t1)))
-//       | (Ex #x. Reveal_Source_DH_Key(s_dh_pk) @ #x)
-//       | (Ex #x. Reveal_Journalist_SIG_Key(j_sig_pk) @ #x)
-//       | (Ex #x. Reveal_Journalist_EDH_Key(j_edh_pk) @ #x)"
-
-// not automatically verifiable
-// lemma Executability_Journalist_Response:
-// exists-trace
-// "Ex #t1 #t2 s_dh_pk s_kem_pk j_sig_pk j_dh_pk nr m_old m.
-//         Journalist_Response(j_sig_pk, j_dh_pk, nr, s_dh_pk, s_kem_pk, m_old, m) @ #t1
-//       & Source_Received(s_dh_pk, j_dh_pk, nr, m) @ #t2
-//       & (not Ex #x. AdversaryActivity() @ #x)"
-
-// lemma Auto_Secrecy_Journalist_Message:
-// "All #t1 #t2 #t3 s_dh_pk s_kem_pk j_sig_pk j_edh_pk j_ekem_pk j_dh_pk nr m_old m.
-//         Source_Sent(s_dh_pk, j_sig_pk, j_edh_pk, j_ekem_pk, nr, m_old) @ #t1
-//       & Journalist_Received(j_sig_pk, j_edh_pk, nr, s_dh_pk, m_old) @ #t2
-//       & Journalist_Response(j_sig_pk, j_dh_pk, nr, s_dh_pk, s_kem_pk, m_old, m) @ #t3
-//   ==>   (not Ex #x. K(m) @ #x)
-//       | (  (Ex #x. Reveal_Source_KEM_Key(s_kem_pk) @ #x)
-//          & (  (Ex #x. PQAttack() @ #x)
-//             | (Ex #x. Reveal_Source_DH_Key(s_dh_pk) @ #x)))"
-
-// lemma Auto_Non_Injective_Agreement_Journalist_Message:
-// "All #t1 s_dh_pk j_dh_pk nr m.
-//         Source_Received(s_dh_pk, j_dh_pk, nr, m) @ #t1
-//   ==>   (Ex j_sig_pk s_kem_pk m_old #x.
-//               Journalist_Response(j_sig_pk, j_dh_pk, nr, s_dh_pk, s_kem_pk, m_old, m) @ #x
-//             & #x < #t1)
-//       | (Ex #x. Reveal_Newsroom_Key(nr) @ #x)
-//       | (Ex #x. Reveal_Journalist_DH_Key(j_dh_pk) @ #x)
-//       | (Ex #x. Reveal_Source_DH_Key(s_dh_pk) @ #x)"
 
 end
