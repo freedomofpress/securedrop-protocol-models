@@ -1,8 +1,8 @@
 // Restriction-based model of authenticated encryption
-functions: APKE_Enc/4, APKE_Dec_Adversary/3, APKE_AD/1
+functions: APKE_Enc/4, APKE_Dec_Adversary/2, APKE_AD/1
 
 // This rule is for the adversary, honest clients will use restrictions as per below
-equations: APKE_Dec_Adversary(APKE_Enc(skS, pk(skR), m, ad), x, skR) = m,
+equations: APKE_Dec_Adversary(APKE_Enc(skS, pk(skR), m, ad), skR) = m,
   APKE_AD(APKE_Enc(skS, pk(skR), m, ad)) = ad
 
 rule APKE_MessageSpaceAdversary:
