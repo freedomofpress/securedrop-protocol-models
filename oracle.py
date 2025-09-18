@@ -26,7 +26,7 @@ def matchAgainstList(priorityList, lines):
       pass
 
 match = None
-if argv[1] == 'SecureChannelSources':
+if argv[1] == 'Auto_SecureChannelSources':
   match = matchAgainstList([
     '~~>',
     re.compile(r'^\(∃'),
@@ -36,7 +36,7 @@ if argv[1] == 'SecureChannelSources':
     '!Submission',
     'KU( senc',
   ], lines)
-elif argv[1] == 'FetchingSharedSecretSecrecySourceSubmission':
+elif argv[1] == 'Auto_FetchingSharedSecretSecrecySourceSubmission':
   match = matchAgainstList([
     re.compile(r'!Submission\(.+\'g\'(,|>)'),
     re.compile(r'∃.+Reveal'),
@@ -49,14 +49,14 @@ elif argv[1] == 'FetchingSharedSecretSecrecySourceSubmission':
     '!KU( \'g\'^(~j_fetching_sk*~r*~x) ) @ #t4',
     'splitEqs(4)',
   ], lines)
-elif argv[1] == 'FetchingSharedSecretSecrecyJournalistSubmission':
+elif argv[1] == 'Auto_FetchingSharedSecretSecrecyJournalistSubmission':
   match = matchAgainstList([
     re.compile(r'!Submission\(.+\'g\'(,|>)'),
     re.compile(r'∃.+Reveal'),
     '!KU( \'g\'^(~r*~s_fetching_sk*~x) ) @ #t5',
     'splitEqs(4)',
   ], lines)
-elif argv[1] == 'FetchingChallengeSecrecy':
+elif argv[1] == 'Auto_FetchingChallengeSecrecy':
   match = matchAgainstList([
     '∃',
     'senc(~chall,',
@@ -64,7 +64,7 @@ elif argv[1] == 'FetchingChallengeSecrecy':
     re.compile(r'!Submission.+ ▶. #t1'),
     '!KU( ~chall',
   ], lines)
-elif argv[1] == 'SourceSubmission_Secrecy':
+elif argv[1] == 'Auto_SourceSubmission_Secrecy':
   match = matchAgainstList([
     re.compile(r'!Submission\(.+\'g\'(,|>)'),
     'Reveal_Newsroom_Key',
@@ -79,7 +79,7 @@ elif argv[1] == 'SourceSubmission_Secrecy':
     re.compile(r'Client_Out\(.+~chall'),
     '∃',
   ], lines)
-elif argv[1] == 'JournalistSubmission_Secrecy':
+elif argv[1] == 'Auto_JournalistSubmission_Secrecy':
   match = matchAgainstList([
     '!JournalistEnrolled',
     '!Ltk_Journalist_APKE_Key',
@@ -92,22 +92,22 @@ elif argv[1] == 'JournalistSubmission_Secrecy':
     re.compile(r'^\(*∃'),
     re.compile(r'^\(*∀'),
   ], lines)
-elif argv[1] == 'Source_Authentication' or argv[1] == 'Journalist_Authentication':
+elif argv[1] == 'Auto_Source_Authentication' or argv[1] == 'Auto_Journalist_Authentication':
   match = matchAgainstList([
     re.compile(r'!Submission\(.+\'g\','),
     re.compile(r'!Submission\(.+\'g\'>'),
   ], lines)
-elif argv[1] == 'SessionSecrecy':
+elif argv[1] == 'Auto_SessionSecrecy':
   match = matchAgainstList([
     re.compile(r'(Source|Journalist)(Queried|Responded)'),
     '!KU( ~sess )',
   ], lines)
-elif argv[1] == 'EphemeralDHSecrecy':
+elif argv[1] == 'Auto_EphemeralDHSecrecy':
   match = matchAgainstList([
     'ClassicSecret',
     '!KU( ~',
   ], lines)
-elif argv[1] == 'SubmissionEquality':
+elif argv[1] == 'Auto_SubmissionEquality':
   match = matchAgainstList([
     'Submi',
   ], lines)
