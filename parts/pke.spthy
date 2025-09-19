@@ -15,7 +15,6 @@ restriction PKE_Consistency:
 
 restriction PKE_Correctness:
   "All ct skR mDec #t1 #t2.
-          PKE_Dec(ct, skR, mDec) @ #t1
+          PKE_Dec(PKE_Enc(pk(skR), pt), skR, mDec) @ #t1
         & Honest(pk(skR)) @ #t2
-    ==> ( (ct = PKE_Enc(pk(skR), mDec))
-        | (mDec = bot & not (ct = PKE_Enc(pk(skR), mDec))))"
+    ==> mDec = pt"
