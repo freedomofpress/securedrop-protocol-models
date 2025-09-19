@@ -395,6 +395,13 @@ rule ServerChallengeSuccess[color=#c24bb8]:
     , PrePQAttack() ]->
   [ Server_Out(~sess, $NR, <ct1, ct2>) ]
 
+/**
+ * We model submissions not using the secure channel (as one might expect), but
+ * using dedicated !Submission facts instead. This rule gives the adversary the
+ * capability to submit their own messages. This is required to clearly identify
+ * submissions - also those made by the adversary - and to reason about when
+ * they are fetched, etc.
+ */
 rule AdversarySubmit[color=#ff6961]:
   [ In(cts), Fr(~id) ]
   --[ Submitted(cts)
