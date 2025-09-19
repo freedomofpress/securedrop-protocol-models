@@ -26,7 +26,7 @@ def matchAgainstList(priorityList, lines):
       pass
 
 match = None
-if argv[1] == 'Auto_SecureChannelSources':
+if argv[1] == 'Easy_SecureChannelSources':
   match = matchAgainstList([
     '~~>',
     re.compile(r'^\(∃'),
@@ -97,17 +97,17 @@ elif argv[1] == 'Auto_Source_Authentication' or argv[1] == 'Auto_Journalist_Auth
     re.compile(r'!Submission\(.+\'g\','),
     re.compile(r'!Submission\(.+\'g\'>'),
   ], lines)
-elif argv[1] == 'Auto_SessionSecrecy':
+elif argv[1] == 'Easy_SessionSecrecy':
   match = matchAgainstList([
     re.compile(r'(Source|Journalist)(Queried|Responded)'),
     '!KU( ~sess )',
   ], lines)
-elif argv[1] == 'Auto_EphemeralDHSecrecy':
+elif argv[1] == 'Easy_EphemeralDHSecrecy':
   match = matchAgainstList([
     'ClassicSecret',
     '!KU( ~',
   ], lines)
-elif argv[1] == 'Auto_SubmissionEquality':
+elif argv[1] == 'Easy_SubmissionEquality':
   match = matchAgainstList([
     'Submi',
   ], lines)

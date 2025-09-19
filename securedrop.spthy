@@ -40,7 +40,7 @@ rule Reveal_Newsroom_Key[color=#ff6961]:
     , AdversaryActivity() ]->
   [ Out(~ltk) ]
 
-lemma Auto_NewsroomKeySecrecy[reuse]:
+lemma Easy_NewsroomKeySecrecy[reuse]:
   "All nr k #t1 #t2. IsNewsroomKey(nr, k) @ #t1 & !KU(k) @ #t2
     ==>   (Ex #x. Reveal_Newsroom_Key(nr) @ #x & #x < #t2)
         | (Ex #x. PQAttack() @ #x & #x < #t2)"
@@ -87,17 +87,17 @@ rule Reveal_Source_APKE[color=#ff6961]:
     , AdversaryActivity() ]->
   [ Out(~s_apke_sk) ]
 
-lemma Auto_SourceFetchingKeySecrecy[reuse]:
+lemma Easy_SourceFetchingKeySecrecy[reuse]:
   "All k pc #t1 #t2. IsSourceFetchingKey(k, pc) @ #t1 & !KU(k) @ #t2
     ==>   (Ex #x. Reveal_Source_Fetching(pc) @ #x & #x < #t2)
         | (Ex #x. PQAttack() @ #x & #x < #t2)"
 
-lemma Auto_SourcePKEKeySecrecy[reuse]:
+lemma Easy_SourcePKEKeySecrecy[reuse]:
   "All k #t1 #t2. IsSourcePKEKey(k) @ #t1 & !KU(k) @ #t2
     ==>   (Ex #x. Reveal_Source_PKE(pk(k)) @ #x & #x < #t2)
         | (Ex #x. PQAttack() @ #x & #x < #t2)"
 
-lemma Auto_SourceAPKEKeySecrecy[reuse]:
+lemma Easy_SourceAPKEKeySecrecy[reuse]:
   "All k #t1 #t2. IsSourceAPKEKey(k) @ #t1 & !KU(k) @ #t2
     ==> (Ex #x. Reveal_Source_APKE(pk(k)) @ #x & #x < #t2)"
 
@@ -153,17 +153,17 @@ rule Reveal_Journalist_APKE[color=#ff6961]:
     , AdversaryActivity() ]->
   [ Out(~j_apke_sk) ]
 
-lemma Auto_JournalistFetchingKeySecrecy[reuse]:
+lemma Easy_JournalistFetchingKeySecrecy[reuse]:
   "All k pc #t1 #t2. IsJournalistFetchingKey(k, pc) @ #t1 & !KU(k) @ #t2
     ==>   (Ex #x. Reveal_Journalist_Fetching(pc) @ #x & #x < #t2)
         | (Ex #x. PQAttack() @ #x & #x < #t2)"
 
-lemma Auto_JournalistSIGKeySecrecy[reuse]:
+lemma Easy_JournalistSIGKeySecrecy[reuse]:
   "All k #t1 #t2. IsJournalistSIGKey(k) @ #t1 & !KU(k) @ #t2
     ==>   (Ex #x. Reveal_Journalist_SIG(pk(k)) @ #x & #x < #t2)
         | (Ex #x. PQAttack() @ #x & #x < #t2)"
 
-lemma Auto_JournalistAPKEKeySecrecy[reuse]:
+lemma Easy_JournalistAPKEKeySecrecy[reuse]:
   "All k #t1 #t2. IsJournalistAPKEKey(k) @ #t1 & !KU(k) @ #t2
     ==> (Ex #x. Reveal_Journalist_APKE(pk(k)) @ #x & #x < #t2)"
 
@@ -201,12 +201,12 @@ rule Reveal_Journalist_EAPKE[color=#ff6961]:
     , AdversaryActivity() ]->
   [ Out(~j_eapke_sk) ]
 
-lemma Auto_JournalistEPKEKeySecrecy[reuse]:
+lemma Easy_JournalistEPKEKeySecrecy[reuse]:
   "All k #t1 #t2. IsJournalistEPKEKey(k) @ #t1 & !KU(k) @ #t2
     ==>   (Ex #x. Reveal_Journalist_EPKE(pk(k)) @ #x & #x < #t2)
         | (Ex #x. PQAttack() @ #x & #x < #t2)"
 
-lemma Auto_JournalistEAPKEKeySecrecy[reuse]:
+lemma Easy_JournalistEAPKEKeySecrecy[reuse]:
   "All k #t1 #t2. IsJournalistEAPKEKey(k) @ #t1 & !KU(k) @ #t2
     ==> (Ex #x. Reveal_Journalist_EAPKE(pk(k)) @ #x & #x < #t2)"
 
@@ -427,12 +427,12 @@ restriction SubmissionAccessTime:
 
 // RESTRICTIONS AND LEMMAS
 
-lemma Auto_Submissions[sources]:
+lemma Easy_Submissions[sources]:
   "All cts #t. SubmissionSources(cts) @ #t
     ==>   (Ex #x. SubmissionSource(cts) @ #x)
         | (Ex #x. KU(cts) @ #x & #x < #t)"
 
-lemma Auto_SecureChannelSources[sources]:
+lemma Easy_SecureChannelSources[sources]:
   "(All m #t. ClientSources(m) @ #t
     ==>   (Ex #x. ClientSource(m) @ #x)
         | (Ex #x. KU(m) @ #x & #x < #t))
@@ -463,10 +463,10 @@ exists-trace
       & Source_Received(s_apke_pk, s_fetch_pk, j_sig_pk, j_apke_pk, nr, m) @ #t2
       & (not Ex #x. AdversaryActivity() @ #x)"
 
-lemma Auto_SessionSecrecy[reuse]:
+lemma Easy_SessionSecrecy[reuse]:
   "All sess #a #b. ClientSession(sess) @ #a & !KU(sess) @ #b ==> F"
 
-lemma Auto_EphemeralDHSecrecy[reuse]:
+lemma Easy_EphemeralDHSecrecy[reuse]:
   "All x #t1 #t2. ClassicSecret(x) @ #t1 & !KU(x) @ #t2 ==> (Ex #x. PQAttack() @ #x & #x < #t2)"
 
 lemma Auto_Source_Authentication[reuse]:
@@ -485,7 +485,7 @@ lemma Auto_Journalist_Authentication[reuse]:
         | (Ex #x. Reveal_Source_APKE(s_apke_pk) @ #x & #x < #t)
         | (Ex #x. Reveal_Newsroom_Key(nr) @ #x & #x < #t)"
 
-lemma Auto_SubmissionEquality[reuse]:
+lemma Easy_SubmissionEquality[reuse]:
   "All id cts1 cts2 #t1 #t2. IsSubmission(id, cts1) @ #t1 & Submit(id, cts2) @ #t2 ==> cts1 = cts2"
 
 // Auto-provable in 2345.66s (Tamarin server)
