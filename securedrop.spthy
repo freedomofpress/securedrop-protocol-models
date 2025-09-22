@@ -212,7 +212,7 @@ lemma Easy_JournalistEAPKEKeySecrecy[reuse]:
 
 // SOURCE MODEL
 // Sending
-rule Source_Send[color=#58a820]:
+rule Source_Send[color=#58a820,no_derivcheck]:
   let s_fetching_pk = 'g'^~s_fetching_sk
       s_apke_pk = pk(~s_apke_sk)
       pt1 = <'submission', s_fetching_pk, pk(~s_pke_sk), ~msg>
@@ -260,7 +260,7 @@ rule Source_Query[color=#58a820]:
   [ Client_Out(~sess, $NR, 'request')
   , SourceQueried($S, $NR, ~sess, ~s_fetching_sk) ]
 
-rule Source_ChallengeResponse[color=#58a820]:
+rule Source_ChallengeResponse[color=#58a820,no_derivcheck]:
   let challenge_pc = 'g'^k
       challenge_key = kdf(<$NR, challenge_pc^~s_fetching_sk>)
   in
@@ -303,7 +303,7 @@ rule Journalist_Query[color=#0a0aff]:
   [ Client_Out(~sess, $NR, 'request')
   , JournalistQueried($J, $NR, ~sess) ]
 
-rule Journalist_ChallengeResponse[color=#0a0aff]:
+rule Journalist_ChallengeResponse[color=#0a0aff,no_derivcheck]:
   let challenge_pc = 'g'^k
       challenge_key = kdf(<$NR, challenge_pc^~j_fetching_sk>)
   in
@@ -372,7 +372,7 @@ rule Journalist_Send[color=#0a0aff]:
 
 // SECUREDROP INSTANCE
 
-rule ServerChallenge[color=#c24bb8]:
+rule ServerChallenge[color=#c24bb8,no_derivcheck]:
   let pk = 'g'^k1
       ss = 'g'^k2
       cts = <ct1, ct2, ss, pk>

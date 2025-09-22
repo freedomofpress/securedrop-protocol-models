@@ -21,7 +21,7 @@ restriction APKE_Correctness:
         & Honest(pk(skDec)) @ #t3
     ==> mDec = pt"
 
-rule APKE_OutsiderAuth1:
+rule APKE_OutsiderAuth1[no_derivcheck]:
   [ In(<~x, pk(~y), pt, ad, info>) ]
   -->
   [ Out(APKE_Enc(~y, pk(~x), pt, ad, info))
