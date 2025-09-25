@@ -25,6 +25,8 @@ def matchAgainstList(priorityList, lines):
     except StopIteration:
       pass
 
+re_keys = re.compile(r'^!?[\w_]+_Key\(')
+
 match = None
 if argv[1] == 'Easy_SecureChannelSources':
   match = matchAgainstList([
@@ -68,9 +70,9 @@ elif argv[1] == 'Auto_SourceSubmission_Secrecy':
   match = matchAgainstList([
     re.compile(r'!Submission\(.+\'g\'(,|>)'),
     'Reveal_Newsroom_Key',
-    'Reveal_Journalist_SIG',
-    '!Ltk',
-    '!Pk',
+    'Reveal_Journalist_SIG_Key',
+    '!LongTerm',
+    '!Public',
     '!KU( sign(<\'ephemeral\'',
     '!KU( sign(<\'long-term\'',
     '!Submission',
@@ -82,13 +84,13 @@ elif argv[1] == 'Auto_SourceSubmission_Secrecy':
 elif argv[1] == 'Auto_JournalistSubmission_Secrecy':
   match = matchAgainstList([
     '!JournalistEnrolled',
-    '!Ltk_Journalist_APKE_Key',
+    '!LongTerm_Journalist_APKE_Key',
     re.compile(r'!Submission\(.+\'g\'(,|>)'),
     '!KU( ~msg )',
     'Fetched( ~id ) @ #x',
     re.compile(r'Client_Out\(.+~chall \)'),
     re.compile(r'!Submission\( \$Server'),
-    '!Ltk_Source',
+    '!LongTerm_Source',
     re.compile(r'^\(*∃'),
     re.compile(r'^\(*∀'),
   ], lines)
