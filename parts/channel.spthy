@@ -20,7 +20,7 @@ rule ServerToClient[color=#ffffff]:
 
 rule AdversaryClientOut[color=#ff6961]:
   [ In(~sess), In(msg), !SecureDropInstance($Server) ]
-  -->
+  --[ AdversaryActivity() ]->
   [ !Client(~sess, $Server, msg) ]
 
 rule ServerCompromise[color=#ff6961]:

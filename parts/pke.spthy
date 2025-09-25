@@ -5,7 +5,7 @@ functions: PKE_Enc/2, PKE_Dec_Adversary/2
 equations: PKE_Dec_Adversary(PKE_Enc(pk(skR), m), skR) = m
 
 rule PKE_MessageSpaceAdversary:
-  [ In(m) ] --> [ !PKE_MessageSpace(m) ]
+  [ In(m) ] --[ AdversaryActivity() ]-> [ !PKE_MessageSpace(m) ]
 
 restriction PKE_Consistency:
   "All ct skR pt1 pt2 #t1 #t2.

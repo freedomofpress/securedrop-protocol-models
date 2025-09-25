@@ -6,7 +6,7 @@ equations: APKE_Dec_Adversary(APKE_Enc(skS, pk(skR), m, ad, info), skR) = m,
   APKE_AD(APKE_Enc(skS, pk(skR), m, ad, info)) = ad
 
 rule APKE_MessageSpaceAdversary:
-  [ In(m) ] --> [ !APKE_MessageSpace(m) ]
+  [ In(m) ] --[ AdversaryActivity() ]-> [ !APKE_MessageSpace(m) ]
 
 restriction APKE_Consistency:
   "All ct pkS skR ad info pt1 pt2 #t1 #t2.
