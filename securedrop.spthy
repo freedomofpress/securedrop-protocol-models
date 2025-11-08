@@ -483,6 +483,7 @@ lemma Agreement_Journalist[reuse]:
     ==>   (Ex id j_eapke_pk #x. JournalistSubmission(id, j_apke_pk, j_eapke_pk, nr, s_apke_pk, s_fetch_pk, m) @ #x & #x < #t)
         | (Ex #x. Reveal_Journalist_APKE(j_apke_pk) @ #x & #x < #t)
         | (Ex #x. Reveal_Source_APKE(s_apke_pk) @ #x & #x < #t)
+        | (Ex j_sig_pk #x. Reveal_Journalist_SIG_Key(nr, j_sig_pk) @ #x & #x < #t)
         | (Ex #x. Reveal_Newsroom_Key(nr) @ #x & #x < #t)"
 
 lemma Easy_SubmissionEquality[reuse]:
@@ -497,6 +498,7 @@ lemma Auto_FetchingSharedSecretSecrecySourceSubmission[reuse]:
         & !KU(ss) @ #t4
         & #t4 < #t2)
     ==>   (Ex #x. Reveal_Journalist_Fetching(j_fetch_pk) @ #x & #x < #t2)
+        | (Ex j_sig_pk #x. Reveal_Journalist_SIG_Key(nr, j_sig_pk) @ #x & #x < #t3)
         | (Ex #x. Reveal_Newsroom_Key(nr) @ #x & #x < #t3)"
 
 // Auto-provable in 3648.20s (Tamarin server)
