@@ -68,7 +68,7 @@ elif argv[1] == 'Auto_FetchingChallengeSecrecy':
     re.compile(r'!Submission.+ ▶. #t1'),
     '!KU( ~chall',
   ], lines)
-elif argv[1] == 'Auto_SourceSubmission_Secrecy':
+elif argv[1] == 'Secrecy_SourceSubmission':
   match = matchAgainstList([
     re_illegal_submission,
     'Reveal_Newsroom_Key',
@@ -84,7 +84,7 @@ elif argv[1] == 'Auto_SourceSubmission_Secrecy':
     re.compile(r'Client_Out\(.+~chall'),
     '∃',
   ], lines)
-elif argv[1] == 'JournalistSubmission_Secrecy':
+elif argv[1] == 'Secrecy_JournalistSubmission':
   match = matchAgainstList([
     '!JournalistEnrolled',
     '!LongTerm_Journalist_APKE_Key',
