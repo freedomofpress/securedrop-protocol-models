@@ -23,7 +23,7 @@ restriction APKE_Correctness:
 
 rule APKE_OutsiderAuth1[no_derivcheck]:
   [ In(<~x, pk(~y), pt, ad, info>) ]
-  -->
+  --[ AdversaryActivity() ]->
   [ Out(APKE_Enc(~y, pk(~x), pt, ad, info))
   , !APKE_MessageSpace(pt) ]
 

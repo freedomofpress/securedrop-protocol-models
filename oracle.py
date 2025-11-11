@@ -50,6 +50,7 @@ elif argv[1] == 'Auto_FetchingSharedSecretSecrecySourceSubmission':
     '!KU( ~ltk',
     re.compile(r'!Submission\(.+\) ▶. #t1'),
     '!KU( sign(<\'j-sig-ltk\', j_fetch_pk, j_apke_pk>, ~',
+    '!KU( sign(<\'nr-sig\',',
     '!KU( \'g\'^(~j_fetching_sk*~r*~x) ) @ #t4',
     'splitEqs(4)',
   ], lines)
@@ -75,9 +76,9 @@ elif argv[1] == 'Secrecy_SourceSubmission':
     'Reveal_Journalist_SIG_Key',
     '!LongTerm',
     '!Public',
+    '!KU( sign(<\'nr-sig\'',
     '!KU( sign(<\'j-sig-eph\'',
     '!KU( sign(<\'j-sig-ltk\'',
-    '!KU( sign(<\'nr-sig\'',
     '!Submission',
     '!KU( ~msg',
     '∀',
@@ -86,7 +87,7 @@ elif argv[1] == 'Secrecy_SourceSubmission':
   ], lines)
 elif argv[1] == 'Secrecy_JournalistSubmission':
   match = matchAgainstList([
-    '!JournalistEnrolled',
+    '!Journalist_Enrolled',
     '!LongTerm_Journalist_APKE_Key',
     re_illegal_submission,
     '!KU( ~msg )',
