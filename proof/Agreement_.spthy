@@ -205,55 +205,105 @@ guarded formula characterizing all counter-examples:
 by sorry
 
 rule (modulo E) Register_Source_Passphrase[color=#ffee00]:
-   [ Fr( ~s_fetching_sk ), Fr( ~s_pke_sk ), Fr( ~s_apke_sk ) ]
+   [ Fr( ~passphrase ) ]
   --[
-  Honest( 'g'^~s_fetching_sk ), Honest( pk(~s_pke_sk) ),
-  Honest( pk(~s_apke_sk) ),
-  IsSourceFetchingKey( ~s_fetching_sk, 'g'^~s_fetching_sk ),
-  IsSourcePKEKey( ~s_pke_sk ), IsSourceAPKEKey( ~s_apke_sk ),
-  Source( pk(~s_apke_sk) ), SourceFetchPk( 'g'^~s_fetching_sk ),
-  PrePQAttack( )
+  Honest( 'g'^kdf(<'fetch', ~passphrase>) ),
+  Honest( pk(kdf(<'pke', ~passphrase>)) ),
+  Honest( pk(kdf(<'apke', ~passphrase>)) ),
+  IsSourcePassphrase( ~passphrase ),
+  IsSourceFetchingKey( kdf(<'fetch', ~passphrase>),
+                       'g'^kdf(<'fetch', ~passphrase>)
+  ),
+  IsSourcePKEKey( kdf(<'pke', ~passphrase>) ),
+  IsSourceAPKEKey( kdf(<'apke', ~passphrase>) ),
+  Source( pk(kdf(<'apke', ~passphrase>)) ),
+  SourceFetchPk( 'g'^kdf(<'fetch', ~passphrase>) ), PrePQAttack( )
   ]->
    [
-   !LongTerm_Source_Key( $A, ~s_fetching_sk, ~s_pke_sk, ~s_apke_sk ),
-   !NonPQSecKey( ~s_fetching_sk ), !NonPQSecKey( ~s_pke_sk ),
-   Out( <'g'^~s_fetching_sk, pk(~s_pke_sk), pk(~s_apke_sk)> )
+   !LongTerm_Source_Key( kdf(<'fetch', ~passphrase>),
+                         kdf(<'pke', ~passphrase>), kdf(<'apke', ~passphrase>)
+   ),
+   !Passphrase( pk(kdf(<'apke', ~passphrase>)), ~passphrase ),
+   !NonPQSecKey( kdf(<'fetch', ~passphrase>) ),
+   !NonPQSecKey( kdf(<'pke', ~passphrase>) ),
+   Out( <'g'^kdf(<'fetch', ~passphrase>), pk(kdf(<'pke', ~passphrase>)), 
+         pk(kdf(<'apke', ~passphrase>))>
+   )
    ]
 
   /* has exactly the trivial AC variant */
 
-rule (modulo E) Reveal_Source_Fetching[color=#ff6961]:
-   [ !LongTerm_Source_Key( $A, ~s_fetching_sk, ~s_pke_sk, ~s_apke_sk ) ]
-  --[ Reveal_Source_Fetching( 'g'^~s_fetching_sk ), AdversaryActivity( )
+rule (modulo E) Reveal_Source_Passphrase[color=#ff6961]:
+   [ !Passphrase( pk(kdf(<'apke', ~passphrase>)), ~passphrase ) ]
+  --[
+  Reveal_Source_Passphrase( pk(kdf(<'apke', ~passphrase>)), ~passphrase ),
+  Reveal_Source_Fetching( 'g'^kdf(<'fetch', ~passphrase>) ),
+  Reveal_Source_PKE( pk(kdf(<'pke', ~passphrase>)) ),
+  Reveal_Source_APKE( pk(kdf(<'apke', ~passphrase>)) ),
+  AdversaryActivity( )
   ]->
-   [ Out( ~s_fetching_sk ) ]
+   [ Out( ~passphrase ) ]
 
   /* has exactly the trivial AC variant */
 
+rule (modulo E) Reveal_Source_Fetching[color=#ff6961]:
+   [ !LongTerm_Source_Key( s_fetching_sk, s_pke_sk, s_apke_sk ) ]
+  --[ Reveal_Source_Fetching( 'g'^s_fetching_sk ), AdversaryActivity( ) ]->
+   [ Out( s_fetching_sk ) ]
+
+  /*
+  rule (modulo AC) Reveal_Source_Fetching[color=#ff6961]:
+     [ !LongTerm_Source_Key( s_fetching_sk, s_pke_sk, s_apke_sk ) ]
+    --[ Reveal_Source_Fetching( z ), AdversaryActivity( ) ]->
+     [ Out( s_fetching_sk ) ]
+    variants (modulo AC)
+    1. s_fetching_sk
+             = s_fetching_sk.5
+       z     = 'g'^s_fetching_sk.5
+    
+    2. s_fetching_sk
+             = one
+       z     = 'g'
+  */
+
 rule (modulo E) Reveal_Source_PKE[color=#ff6961]:
-   [ !LongTerm_Source_Key( $A, ~s_fetching_sk, ~s_pke_sk, ~s_apke_sk ) ]
-  --[ Reveal_Source_PKE( pk(~s_pke_sk) ), AdversaryActivity( ) ]->
-   [ Out( ~s_pke_sk ) ]
+   [ !LongTerm_Source_Key( s_fetching_sk, s_pke_sk, s_apke_sk ) ]
+  --[ Reveal_Source_PKE( pk(s_pke_sk) ), AdversaryActivity( ) ]->
+   [ Out( s_pke_sk ) ]
 
   /* has exactly the trivial AC variant */
 
 rule (modulo E) Reveal_Source_APKE[color=#ff6961]:
-   [ !LongTerm_Source_Key( $A, ~s_fetching_sk, ~s_pke_sk, ~s_apke_sk ) ]
-  --[ Reveal_Source_APKE( pk(~s_apke_sk) ), AdversaryActivity( ) ]->
-   [ Out( ~s_apke_sk ) ]
+   [ !LongTerm_Source_Key( s_fetching_sk, s_pke_sk, s_apke_sk ) ]
+  --[ Reveal_Source_APKE( pk(s_apke_sk) ), AdversaryActivity( ) ]->
+   [ Out( s_apke_sk ) ]
 
   /* has exactly the trivial AC variant */
 
+lemma Easy_SourcePassphraseSecrecy [reuse]:
+  all-traces
+  "∀ p #t1 #t2.
+    ((IsSourcePassphrase( p ) @ #t1) ∧ (!KU( p ) @ #t2)) ⇒
+    (∃ s #x. (Reveal_Source_Passphrase( s, p ) @ #x) ∧ (#x < #t2))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ p #t1 #t2.
+  (IsSourcePassphrase( p ) @ #t1) ∧ (!KU( p ) @ #t2)
+ ∧
+  ∀ s #x. (Reveal_Source_Passphrase( s, p ) @ #x) ⇒ ¬(#x < #t2)"
+*/
+by sorry
+
 lemma Easy_SourceFetchingKeySecrecy [reuse]:
   all-traces
-  "∀ k pc #t1 #t2.
-    ((IsSourceFetchingKey( k, pc ) @ #t1) ∧ (!KU( k ) @ #t2)) ⇒
+  "∀ sc pc #t1 #t2.
+    ((IsSourceFetchingKey( sc, pc ) @ #t1) ∧ (!KU( sc ) @ #t2)) ⇒
     ((∃ #x. (Reveal_Source_Fetching( pc ) @ #x) ∧ (#x < #t2)) ∨
      (∃ #x. (PQAttack( ) @ #x) ∧ (#x < #t2)))"
 /*
 guarded formula characterizing all counter-examples:
-"∃ k pc #t1 #t2.
-  (IsSourceFetchingKey( k, pc ) @ #t1) ∧ (!KU( k ) @ #t2)
+"∃ sc pc #t1 #t2.
+  (IsSourceFetchingKey( sc, pc ) @ #t1) ∧ (!KU( sc ) @ #t2)
  ∧
   (∀ #x. (Reveal_Source_Fetching( pc ) @ #x) ⇒ ¬(#x < #t2)) ∧
   (∀ #x. (PQAttack( ) @ #x) ⇒ ¬(#x < #t2))"
@@ -262,31 +312,31 @@ by sorry
 
 lemma Easy_SourcePKEKeySecrecy [reuse]:
   all-traces
-  "∀ k #t1 #t2.
-    ((IsSourcePKEKey( k ) @ #t1) ∧ (!KU( k ) @ #t2)) ⇒
-    ((∃ #x. (Reveal_Source_PKE( pk(k) ) @ #x) ∧ (#x < #t2)) ∨
+  "∀ pke_pk #t1 #t2.
+    ((IsSourcePKEKey( pke_pk ) @ #t1) ∧ (!KU( pke_pk ) @ #t2)) ⇒
+    ((∃ #x. (Reveal_Source_PKE( pk(pke_pk) ) @ #x) ∧ (#x < #t2)) ∨
      (∃ #x. (PQAttack( ) @ #x) ∧ (#x < #t2)))"
 /*
 guarded formula characterizing all counter-examples:
-"∃ k #t1 #t2.
-  (IsSourcePKEKey( k ) @ #t1) ∧ (!KU( k ) @ #t2)
+"∃ pke_pk #t1 #t2.
+  (IsSourcePKEKey( pke_pk ) @ #t1) ∧ (!KU( pke_pk ) @ #t2)
  ∧
-  (∀ #x. (Reveal_Source_PKE( pk(k) ) @ #x) ⇒ ¬(#x < #t2)) ∧
+  (∀ #x. (Reveal_Source_PKE( pk(pke_pk) ) @ #x) ⇒ ¬(#x < #t2)) ∧
   (∀ #x. (PQAttack( ) @ #x) ⇒ ¬(#x < #t2))"
 */
 by sorry
 
 lemma Easy_SourceAPKEKeySecrecy [reuse]:
   all-traces
-  "∀ k #t1 #t2.
-    ((IsSourceAPKEKey( k ) @ #t1) ∧ (!KU( k ) @ #t2)) ⇒
-    (∃ #x. (Reveal_Source_APKE( pk(k) ) @ #x) ∧ (#x < #t2))"
+  "∀ apke_sk #t1 #t2.
+    ((IsSourceAPKEKey( apke_sk ) @ #t1) ∧ (!KU( apke_sk ) @ #t2)) ⇒
+    (∃ #x. (Reveal_Source_APKE( pk(apke_sk) ) @ #x) ∧ (#x < #t2))"
 /*
 guarded formula characterizing all counter-examples:
-"∃ k #t1 #t2.
-  (IsSourceAPKEKey( k ) @ #t1) ∧ (!KU( k ) @ #t2)
+"∃ apke_sk #t1 #t2.
+  (IsSourceAPKEKey( apke_sk ) @ #t1) ∧ (!KU( apke_sk ) @ #t2)
  ∧
-  ∀ #x. (Reveal_Source_APKE( pk(k) ) @ #x) ⇒ ¬(#x < #t2)"
+  ∀ #x. (Reveal_Source_APKE( pk(apke_sk) ) @ #x) ⇒ ¬(#x < #t2)"
 */
 by sorry
 
@@ -453,7 +503,7 @@ by sorry
 
 rule (modulo E) Source_Send[color=#58a820, no_derivcheck]:
    [
-   !LongTerm_Source_Key( $S, ~s_fetching_sk, ~s_pke_sk, ~s_apke_sk ),
+   !LongTerm_Source_Key( s_fetching_sk, s_pke_sk, s_apke_sk ),
    !Public_Newsroom_Key( $NR, nr_pk ),
    In( <j_sig_pk, 'g'^k, j_apke_pk, j_epke_pk, j_eapke_pk, sig_j_sig_pk, 
         sig_j_ltk, sig_j_eph>
@@ -466,47 +516,46 @@ rule (modulo E) Source_Send[color=#58a820, no_derivcheck]:
   Eq( verify(sig_j_eph, <'j-sig-eph', j_epke_pk, j_eapke_pk>, j_sig_pk),
       true
   ),
-  SourceSubmission( ~id, 'g'^~s_fetching_sk, pk(~s_apke_sk), j_eapke_pk,
+  SourceSubmission( ~id, 'g'^s_fetching_sk, pk(s_apke_sk), j_eapke_pk,
                     'g'^k, $NR, ~msg
   ),
   SubmissionSource( <
-                     APKE_Enc(~s_apke_sk, j_eapke_pk,
-                              <'submission', 'g'^~s_fetching_sk, pk(~s_pke_sk), ~msg>, $NR, 'g'^k), 
-                     PKE_Enc(j_epke_pk, <'pk', pk(~s_apke_sk)>), 'g'^k^~x, 'g'^~x>
+                     APKE_Enc(s_apke_sk, j_eapke_pk,
+                              <'submission', 'g'^s_fetching_sk, pk(s_pke_sk), ~msg>, $NR, 'g'^k), 
+                     PKE_Enc(j_epke_pk, <'pk', pk(s_apke_sk)>), 'g'^k^~x, 'g'^~x>
   ),
   ServerSource( <
-                 APKE_Enc(~s_apke_sk, j_eapke_pk,
-                          <'submission', 'g'^~s_fetching_sk, pk(~s_pke_sk), ~msg>, $NR, 'g'^k), 
-                 PKE_Enc(j_epke_pk, <'pk', pk(~s_apke_sk)>)>
+                 APKE_Enc(s_apke_sk, j_eapke_pk,
+                          <'submission', 'g'^s_fetching_sk, pk(s_pke_sk), ~msg>, $NR, 'g'^k), 
+                 PKE_Enc(j_epke_pk, <'pk', pk(s_apke_sk)>)>
   ),
   ClientSession( ~sess ), SourceSubmissionFor( ~id, 'g'^k ),
   ClassicSecret( ~x ),
   Submit( ~id,
           <
-           APKE_Enc(~s_apke_sk, j_eapke_pk,
-                    <'submission', 'g'^~s_fetching_sk, pk(~s_pke_sk), ~msg>, $NR, 'g'^k), 
-           PKE_Enc(j_epke_pk, <'pk', pk(~s_apke_sk)>), 'g'^k^~x, 'g'^~x>
+           APKE_Enc(s_apke_sk, j_eapke_pk,
+                    <'submission', 'g'^s_fetching_sk, pk(s_pke_sk), ~msg>, $NR, 'g'^k), 
+           PKE_Enc(j_epke_pk, <'pk', pk(s_apke_sk)>), 'g'^k^~x, 'g'^~x>
   ),
   PrePQAttack( )
   ]->
    [
    !Submission( $NR, ~id,
                 <
-                 APKE_Enc(~s_apke_sk, j_eapke_pk,
-                          <'submission', 'g'^~s_fetching_sk, pk(~s_pke_sk), ~msg>, $NR, 'g'^k), 
-                 PKE_Enc(j_epke_pk, <'pk', pk(~s_apke_sk)>), 'g'^k^~x, 'g'^~x>
+                 APKE_Enc(s_apke_sk, j_eapke_pk,
+                          <'submission', 'g'^s_fetching_sk, pk(s_pke_sk), ~msg>, $NR, 'g'^k), 
+                 PKE_Enc(j_epke_pk, <'pk', pk(s_apke_sk)>), 'g'^k^~x, 'g'^~x>
    ),
    FetchToken( ~id ),
-   !APKE_MessageSpace( <'submission', 'g'^~s_fetching_sk, pk(~s_pke_sk), 
-                        ~msg>
+   !APKE_MessageSpace( <'submission', 'g'^s_fetching_sk, pk(s_pke_sk), ~msg>
    ),
-   !PKE_MessageSpace( <'pk', pk(~s_apke_sk)> ), !NonPQSecKey( ~x )
+   !PKE_MessageSpace( <'pk', pk(s_apke_sk)> ), !NonPQSecKey( ~x )
    ]
 
   /*
   rule (modulo AC) Source_Send[color=#58a820, no_derivcheck]:
      [
-     !LongTerm_Source_Key( $S, ~s_fetching_sk, ~s_pke_sk, ~s_apke_sk ),
+     !LongTerm_Source_Key( s_fetching_sk, s_pke_sk, s_apke_sk ),
      !Public_Newsroom_Key( $NR, nr_pk ),
      In( <j_sig_pk, z, j_apke_pk, j_epke_pk, j_eapke_pk, sig_j_sig_pk, 
           sig_j_ltk, sig_j_eph>
@@ -514,422 +563,882 @@ rule (modulo E) Source_Send[color=#58a820, no_derivcheck]:
      Fr( ~sess ), Fr( ~x ), Fr( ~msg ), Fr( ~id )
      ]
     --[
-    Eq( z.1, true ), Eq( z.2, true ), Eq( z.3, true ),
-    SourceSubmission( ~id, 'g'^~s_fetching_sk, pk(~s_apke_sk), j_eapke_pk, z,
-                      $NR, ~msg
-    ),
+    Eq( z.2, true ), Eq( z.3, true ), Eq( z.4, true ),
+    SourceSubmission( ~id, z.1, pk(s_apke_sk), j_eapke_pk, z, $NR, ~msg ),
     SubmissionSource( <
-                       APKE_Enc(~s_apke_sk, j_eapke_pk,
-                                <'submission', 'g'^~s_fetching_sk, pk(~s_pke_sk), ~msg>, $NR, z), 
-                       PKE_Enc(j_epke_pk, <'pk', pk(~s_apke_sk)>), 'g'^x.1, 'g'^~x>
+                       APKE_Enc(s_apke_sk, j_eapke_pk, <'submission', z.1, pk(s_pke_sk), ~msg>,
+                                $NR, z), 
+                       PKE_Enc(j_epke_pk, <'pk', pk(s_apke_sk)>), 'g'^x.1, 'g'^~x>
     ),
     ServerSource( <
-                   APKE_Enc(~s_apke_sk, j_eapke_pk,
-                            <'submission', 'g'^~s_fetching_sk, pk(~s_pke_sk), ~msg>, $NR, z), 
-                   PKE_Enc(j_epke_pk, <'pk', pk(~s_apke_sk)>)>
+                   APKE_Enc(s_apke_sk, j_eapke_pk, <'submission', z.1, pk(s_pke_sk), ~msg>,
+                            $NR, z), 
+                   PKE_Enc(j_epke_pk, <'pk', pk(s_apke_sk)>)>
     ),
     ClientSession( ~sess ), SourceSubmissionFor( ~id, z ),
     ClassicSecret( ~x ),
     Submit( ~id,
             <
-             APKE_Enc(~s_apke_sk, j_eapke_pk,
-                      <'submission', 'g'^~s_fetching_sk, pk(~s_pke_sk), ~msg>, $NR, z), 
-             PKE_Enc(j_epke_pk, <'pk', pk(~s_apke_sk)>), 'g'^x.1, 'g'^~x>
+             APKE_Enc(s_apke_sk, j_eapke_pk, <'submission', z.1, pk(s_pke_sk), ~msg>,
+                      $NR, z), 
+             PKE_Enc(j_epke_pk, <'pk', pk(s_apke_sk)>), 'g'^x.1, 'g'^~x>
     ),
     PrePQAttack( )
     ]->
      [
      !Submission( $NR, ~id,
                   <
-                   APKE_Enc(~s_apke_sk, j_eapke_pk,
-                            <'submission', 'g'^~s_fetching_sk, pk(~s_pke_sk), ~msg>, $NR, z), 
-                   PKE_Enc(j_epke_pk, <'pk', pk(~s_apke_sk)>), 'g'^x.1, 'g'^~x>
+                   APKE_Enc(s_apke_sk, j_eapke_pk, <'submission', z.1, pk(s_pke_sk), ~msg>,
+                            $NR, z), 
+                   PKE_Enc(j_epke_pk, <'pk', pk(s_apke_sk)>), 'g'^x.1, 'g'^~x>
      ),
      FetchToken( ~id ),
-     !APKE_MessageSpace( <'submission', 'g'^~s_fetching_sk, pk(~s_pke_sk), 
-                          ~msg>
-     ),
-     !PKE_MessageSpace( <'pk', pk(~s_apke_sk)> ), !NonPQSecKey( ~x )
+     !APKE_MessageSpace( <'submission', z.1, pk(s_pke_sk), ~msg> ),
+     !PKE_MessageSpace( <'pk', pk(s_apke_sk)> ), !NonPQSecKey( ~x )
      ]
     variants (modulo AC)
-     1. ~x    = ~x.43
+     1. ~x    = ~x.42
         j_apke_pk
-              = j_apke_pk.44
+              = j_apke_pk.43
         j_eapke_pk
-              = j_eapke_pk.45
+              = j_eapke_pk.44
         j_epke_pk
-              = j_epke_pk.46
+              = j_epke_pk.45
         j_sig_pk
-              = j_sig_pk.47
-        nr_pk = nr_pk.49
+              = j_sig_pk.46
+        nr_pk = nr_pk.48
+        s_fetching_sk
+              = s_fetching_sk.50
         sig_j_eph
-              = sig_j_eph.50
+              = sig_j_eph.52
         sig_j_ltk
-              = sig_j_ltk.51
+              = sig_j_ltk.53
         sig_j_sig_pk
-              = sig_j_sig_pk.52
+              = sig_j_sig_pk.54
         z     = 'g'
-        x.1   = ~x.43
-        z.1   = verify(sig_j_sig_pk.52, <'nr-sig', j_sig_pk.47>, nr_pk.49)
-        z.2   = verify(sig_j_ltk.51, <'j-sig-ltk', 'g', j_apke_pk.44>,
-                       j_sig_pk.47)
-        z.3   = verify(sig_j_eph.50, <'j-sig-eph', j_epke_pk.46, j_eapke_pk.45>,
-                       j_sig_pk.47)
+        x.1   = ~x.42
+        z.1   = 'g'^s_fetching_sk.50
+        z.2   = verify(sig_j_sig_pk.54, <'nr-sig', j_sig_pk.46>, nr_pk.48)
+        z.3   = verify(sig_j_ltk.53, <'j-sig-ltk', 'g', j_apke_pk.43>,
+                       j_sig_pk.46)
+        z.4   = verify(sig_j_eph.52, <'j-sig-eph', j_epke_pk.45, j_eapke_pk.44>,
+                       j_sig_pk.46)
     
-     2. ~x    = ~x.313
+     2. ~x    = ~x.42
         j_apke_pk
-              = j_apke_pk.314
+              = j_apke_pk.43
         j_eapke_pk
-              = j_eapke_pk.315
+              = j_eapke_pk.44
         j_epke_pk
-              = j_epke_pk.316
+              = j_epke_pk.45
         j_sig_pk
-              = j_sig_pk.317
-        nr_pk = nr_pk.319
+              = j_sig_pk.46
+        nr_pk = nr_pk.48
+        s_fetching_sk
+              = one
         sig_j_eph
-              = sig_j_eph.320
+              = sig_j_eph.52
         sig_j_ltk
-              = sig_j_ltk.321
+              = sig_j_ltk.53
         sig_j_sig_pk
-              = sig_j_sig_pk.322
-        z     = 'g'^k.616
-        x.1   = (~x.313*k.616)
-        z.1   = verify(sig_j_sig_pk.322, <'nr-sig', j_sig_pk.317>, nr_pk.319)
-        z.2   = verify(sig_j_ltk.321, <'j-sig-ltk', 'g'^k.616, j_apke_pk.314>,
-                       j_sig_pk.317)
-        z.3   = verify(sig_j_eph.320,
-                       <'j-sig-eph', j_epke_pk.316, j_eapke_pk.315>, j_sig_pk.317)
-    
-     3. ~x    = ~x.314
-        j_apke_pk
-              = j_apke_pk.315
-        j_eapke_pk
-              = j_eapke_pk.316
-        j_epke_pk
-              = j_epke_pk.317
-        j_sig_pk
-              = j_sig_pk.318
-        nr_pk = pk(x.618)
-        sig_j_eph
-              = sig_j_eph.321
-        sig_j_ltk
-              = sig_j_ltk.322
-        sig_j_sig_pk
-              = sign(<'nr-sig', j_sig_pk.318>, x.618)
+              = sig_j_sig_pk.54
         z     = 'g'
-        x.1   = ~x.314
-        z.1   = true
-        z.2   = verify(sig_j_ltk.322, <'j-sig-ltk', 'g', j_apke_pk.315>,
-                       j_sig_pk.318)
-        z.3   = verify(sig_j_eph.321,
-                       <'j-sig-eph', j_epke_pk.317, j_eapke_pk.316>, j_sig_pk.318)
+        x.1   = ~x.42
+        z.1   = 'g'
+        z.2   = verify(sig_j_sig_pk.54, <'nr-sig', j_sig_pk.46>, nr_pk.48)
+        z.3   = verify(sig_j_ltk.53, <'j-sig-ltk', 'g', j_apke_pk.43>,
+                       j_sig_pk.46)
+        z.4   = verify(sig_j_eph.52, <'j-sig-eph', j_epke_pk.45, j_eapke_pk.44>,
+                       j_sig_pk.46)
     
-     4. ~x    = ~x.315
+     3. ~x    = ~x.209
         j_apke_pk
-              = j_apke_pk.316
+              = j_apke_pk.210
         j_eapke_pk
-              = j_eapke_pk.317
+              = j_eapke_pk.211
         j_epke_pk
-              = j_epke_pk.318
+              = j_epke_pk.212
         j_sig_pk
-              = pk(x.620)
-        nr_pk = nr_pk.321
+              = j_sig_pk.213
+        nr_pk = nr_pk.215
+        s_fetching_sk
+              = s_fetching_sk.217
         sig_j_eph
-              = sign(<'j-sig-eph', j_epke_pk.318, j_eapke_pk.317>, x.620)
+              = sig_j_eph.219
         sig_j_ltk
-              = sig_j_ltk.323
+              = sig_j_ltk.220
         sig_j_sig_pk
-              = sig_j_sig_pk.324
+              = sig_j_sig_pk.221
+        z     = 'g'^k.412
+        x.1   = (~x.209*k.412)
+        z.1   = 'g'^s_fetching_sk.217
+        z.2   = verify(sig_j_sig_pk.221, <'nr-sig', j_sig_pk.213>, nr_pk.215)
+        z.3   = verify(sig_j_ltk.220, <'j-sig-ltk', 'g'^k.412, j_apke_pk.210>,
+                       j_sig_pk.213)
+        z.4   = verify(sig_j_eph.219,
+                       <'j-sig-eph', j_epke_pk.212, j_eapke_pk.211>, j_sig_pk.213)
+    
+     4. ~x    = ~x.209
+        j_apke_pk
+              = j_apke_pk.210
+        j_eapke_pk
+              = j_eapke_pk.211
+        j_epke_pk
+              = j_epke_pk.212
+        j_sig_pk
+              = j_sig_pk.213
+        nr_pk = nr_pk.215
+        s_fetching_sk
+              = one
+        sig_j_eph
+              = sig_j_eph.219
+        sig_j_ltk
+              = sig_j_ltk.220
+        sig_j_sig_pk
+              = sig_j_sig_pk.221
+        z     = 'g'^k.412
+        x.1   = (~x.209*k.412)
+        z.1   = 'g'
+        z.2   = verify(sig_j_sig_pk.221, <'nr-sig', j_sig_pk.213>, nr_pk.215)
+        z.3   = verify(sig_j_ltk.220, <'j-sig-ltk', 'g'^k.412, j_apke_pk.210>,
+                       j_sig_pk.213)
+        z.4   = verify(sig_j_eph.219,
+                       <'j-sig-eph', j_epke_pk.212, j_eapke_pk.211>, j_sig_pk.213)
+    
+     5. ~x    = ~x.210
+        j_apke_pk
+              = j_apke_pk.211
+        j_eapke_pk
+              = j_eapke_pk.212
+        j_epke_pk
+              = j_epke_pk.213
+        j_sig_pk
+              = j_sig_pk.214
+        nr_pk = pk(x.414)
+        s_fetching_sk
+              = s_fetching_sk.218
+        sig_j_eph
+              = sig_j_eph.220
+        sig_j_ltk
+              = sig_j_ltk.221
+        sig_j_sig_pk
+              = sign(<'nr-sig', j_sig_pk.214>, x.414)
         z     = 'g'
-        x.1   = ~x.315
-        z.1   = verify(sig_j_sig_pk.324, <'nr-sig', pk(x.620)>, nr_pk.321)
-        z.2   = verify(sig_j_ltk.323, <'j-sig-ltk', 'g', j_apke_pk.316>,
-                       pk(x.620))
-        z.3   = true
+        x.1   = ~x.210
+        z.1   = 'g'^s_fetching_sk.218
+        z.2   = true
+        z.3   = verify(sig_j_ltk.221, <'j-sig-ltk', 'g', j_apke_pk.211>,
+                       j_sig_pk.214)
+        z.4   = verify(sig_j_eph.220,
+                       <'j-sig-eph', j_epke_pk.213, j_eapke_pk.212>, j_sig_pk.214)
     
-     5. ~x    = ~x.316
+     6. ~x    = ~x.210
         j_apke_pk
-              = j_apke_pk.317
+              = j_apke_pk.211
         j_eapke_pk
-              = j_eapke_pk.318
+              = j_eapke_pk.212
         j_epke_pk
-              = j_epke_pk.319
+              = j_epke_pk.213
         j_sig_pk
-              = j_sig_pk.320
-        nr_pk = pk(x.621)
+              = j_sig_pk.214
+        nr_pk = pk(x.414)
+        s_fetching_sk
+              = one
         sig_j_eph
-              = sig_j_eph.323
+              = sig_j_eph.220
         sig_j_ltk
-              = sig_j_ltk.324
+              = sig_j_ltk.221
         sig_j_sig_pk
-              = sign(<'nr-sig', j_sig_pk.320>, x.621)
-        z     = 'g'^k.622
-        x.1   = (~x.316*k.622)
-        z.1   = true
-        z.2   = verify(sig_j_ltk.324, <'j-sig-ltk', 'g'^k.622, j_apke_pk.317>,
-                       j_sig_pk.320)
-        z.3   = verify(sig_j_eph.323,
-                       <'j-sig-eph', j_epke_pk.319, j_eapke_pk.318>, j_sig_pk.320)
-    
-     6. ~x    = ~x.316
-        j_apke_pk
-              = j_apke_pk.317
-        j_eapke_pk
-              = j_eapke_pk.318
-        j_epke_pk
-              = j_epke_pk.319
-        j_sig_pk
-              = pk(x.621)
-        nr_pk = nr_pk.322
-        sig_j_eph
-              = sign(<'j-sig-eph', j_epke_pk.319, j_eapke_pk.318>, x.621)
-        sig_j_ltk
-              = sig_j_ltk.324
-        sig_j_sig_pk
-              = sig_j_sig_pk.325
-        z     = 'g'^k.622
-        x.1   = (~x.316*k.622)
-        z.1   = verify(sig_j_sig_pk.325, <'nr-sig', pk(x.621)>, nr_pk.322)
-        z.2   = verify(sig_j_ltk.324, <'j-sig-ltk', 'g'^k.622, j_apke_pk.317>,
-                       pk(x.621))
-        z.3   = true
-    
-     7. ~x    = ~x.316
-        j_apke_pk
-              = j_apke_pk.317
-        j_eapke_pk
-              = j_eapke_pk.318
-        j_epke_pk
-              = j_epke_pk.319
-        j_sig_pk
-              = pk(x.621)
-        nr_pk = pk(x.622)
-        sig_j_eph
-              = sign(<'j-sig-eph', j_epke_pk.319, j_eapke_pk.318>, x.621)
-        sig_j_ltk
-              = sig_j_ltk.324
-        sig_j_sig_pk
-              = sign(<'nr-sig', pk(x.621)>, x.622)
+              = sign(<'nr-sig', j_sig_pk.214>, x.414)
         z     = 'g'
-        x.1   = ~x.316
-        z.1   = true
-        z.2   = verify(sig_j_ltk.324, <'j-sig-ltk', 'g', j_apke_pk.317>,
-                       pk(x.621))
-        z.3   = true
+        x.1   = ~x.210
+        z.1   = 'g'
+        z.2   = true
+        z.3   = verify(sig_j_ltk.221, <'j-sig-ltk', 'g', j_apke_pk.211>,
+                       j_sig_pk.214)
+        z.4   = verify(sig_j_eph.220,
+                       <'j-sig-eph', j_epke_pk.213, j_eapke_pk.212>, j_sig_pk.214)
     
-     8. ~x    = ~x.316
+     7. ~x    = ~x.211
         j_apke_pk
-              = j_apke_pk.317
+              = j_apke_pk.212
         j_eapke_pk
-              = j_eapke_pk.318
+              = j_eapke_pk.213
         j_epke_pk
-              = j_epke_pk.319
+              = j_epke_pk.214
         j_sig_pk
-              = pk(x.622)
-        nr_pk = nr_pk.322
+              = pk(x.416)
+        nr_pk = nr_pk.217
+        s_fetching_sk
+              = s_fetching_sk.219
         sig_j_eph
-              = sig_j_eph.323
+              = sign(<'j-sig-eph', j_epke_pk.214, j_eapke_pk.213>, x.416)
         sig_j_ltk
-              = sign(<'j-sig-ltk', 'g', j_apke_pk.317>, x.622)
+              = sig_j_ltk.222
         sig_j_sig_pk
-              = sig_j_sig_pk.325
+              = sig_j_sig_pk.223
         z     = 'g'
-        x.1   = ~x.316
-        z.1   = verify(sig_j_sig_pk.325, <'nr-sig', pk(x.622)>, nr_pk.322)
-        z.2   = true
-        z.3   = verify(sig_j_eph.323,
-                       <'j-sig-eph', j_epke_pk.319, j_eapke_pk.318>, pk(x.622))
+        x.1   = ~x.211
+        z.1   = 'g'^s_fetching_sk.219
+        z.2   = verify(sig_j_sig_pk.223, <'nr-sig', pk(x.416)>, nr_pk.217)
+        z.3   = verify(sig_j_ltk.222, <'j-sig-ltk', 'g', j_apke_pk.212>,
+                       pk(x.416))
+        z.4   = true
     
-     9. ~x    = ~x.316
+     8. ~x    = ~x.211
         j_apke_pk
-              = j_apke_pk.317
+              = j_apke_pk.212
         j_eapke_pk
-              = j_eapke_pk.318
+              = j_eapke_pk.213
         j_epke_pk
-              = j_epke_pk.319
+              = j_epke_pk.214
         j_sig_pk
-              = pk(x.622)
-        nr_pk = nr_pk.322
+              = pk(x.416)
+        nr_pk = nr_pk.217
+        s_fetching_sk
+              = one
         sig_j_eph
-              = sign(<'j-sig-eph', j_epke_pk.319, j_eapke_pk.318>, x.622)
+              = sign(<'j-sig-eph', j_epke_pk.214, j_eapke_pk.213>, x.416)
         sig_j_ltk
-              = sign(<'j-sig-ltk', 'g', j_apke_pk.317>, x.622)
+              = sig_j_ltk.222
         sig_j_sig_pk
-              = sig_j_sig_pk.325
+              = sig_j_sig_pk.223
         z     = 'g'
-        x.1   = ~x.316
-        z.1   = verify(sig_j_sig_pk.325, <'nr-sig', pk(x.622)>, nr_pk.322)
-        z.2   = true
-        z.3   = true
+        x.1   = ~x.211
+        z.1   = 'g'
+        z.2   = verify(sig_j_sig_pk.223, <'nr-sig', pk(x.416)>, nr_pk.217)
+        z.3   = verify(sig_j_ltk.222, <'j-sig-ltk', 'g', j_apke_pk.212>,
+                       pk(x.416))
+        z.4   = true
     
-    10. ~x    = ~x.317
+     9. ~x    = ~x.212
         j_apke_pk
-              = j_apke_pk.318
+              = j_apke_pk.213
         j_eapke_pk
-              = j_eapke_pk.319
+              = j_eapke_pk.214
         j_epke_pk
-              = j_epke_pk.320
+              = j_epke_pk.215
         j_sig_pk
-              = pk(x.623)
-        nr_pk = nr_pk.323
+              = j_sig_pk.216
+        nr_pk = pk(x.417)
+        s_fetching_sk
+              = s_fetching_sk.220
         sig_j_eph
-              = sig_j_eph.324
+              = sig_j_eph.222
         sig_j_ltk
-              = sign(<'j-sig-ltk', 'g'^x.624, j_apke_pk.318>, x.623)
+              = sig_j_ltk.223
         sig_j_sig_pk
-              = sig_j_sig_pk.326
-        z     = 'g'^x.624
-        x.1   = (~x.317*x.624)
-        z.1   = verify(sig_j_sig_pk.326, <'nr-sig', pk(x.623)>, nr_pk.323)
+              = sign(<'nr-sig', j_sig_pk.216>, x.417)
+        z     = 'g'^k.418
+        x.1   = (~x.212*k.418)
+        z.1   = 'g'^s_fetching_sk.220
         z.2   = true
-        z.3   = verify(sig_j_eph.324,
-                       <'j-sig-eph', j_epke_pk.320, j_eapke_pk.319>, pk(x.623))
+        z.3   = verify(sig_j_ltk.223, <'j-sig-ltk', 'g'^k.418, j_apke_pk.213>,
+                       j_sig_pk.216)
+        z.4   = verify(sig_j_eph.222,
+                       <'j-sig-eph', j_epke_pk.215, j_eapke_pk.214>, j_sig_pk.216)
     
-    11. ~x    = ~x.317
+    10. ~x    = ~x.212
         j_apke_pk
-              = j_apke_pk.318
+              = j_apke_pk.213
         j_eapke_pk
-              = j_eapke_pk.319
+              = j_eapke_pk.214
         j_epke_pk
-              = j_epke_pk.320
+              = j_epke_pk.215
         j_sig_pk
-              = pk(x.623)
-        nr_pk = nr_pk.323
+              = j_sig_pk.216
+        nr_pk = pk(x.417)
+        s_fetching_sk
+              = one
         sig_j_eph
-              = sign(<'j-sig-eph', j_epke_pk.320, j_eapke_pk.319>, x.623)
+              = sig_j_eph.222
         sig_j_ltk
-              = sign(<'j-sig-ltk', 'g'^x.624, j_apke_pk.318>, x.623)
+              = sig_j_ltk.223
         sig_j_sig_pk
-              = sig_j_sig_pk.326
-        z     = 'g'^x.624
-        x.1   = (~x.317*x.624)
-        z.1   = verify(sig_j_sig_pk.326, <'nr-sig', pk(x.623)>, nr_pk.323)
+              = sign(<'nr-sig', j_sig_pk.216>, x.417)
+        z     = 'g'^k.418
+        x.1   = (~x.212*k.418)
+        z.1   = 'g'
         z.2   = true
-        z.3   = true
+        z.3   = verify(sig_j_ltk.223, <'j-sig-ltk', 'g'^k.418, j_apke_pk.213>,
+                       j_sig_pk.216)
+        z.4   = verify(sig_j_eph.222,
+                       <'j-sig-eph', j_epke_pk.215, j_eapke_pk.214>, j_sig_pk.216)
     
-    12. ~x    = ~x.317
+    11. ~x    = ~x.212
         j_apke_pk
-              = j_apke_pk.318
+              = j_apke_pk.213
         j_eapke_pk
-              = j_eapke_pk.319
+              = j_eapke_pk.214
         j_epke_pk
-              = j_epke_pk.320
+              = j_epke_pk.215
         j_sig_pk
-              = pk(x.623)
-        nr_pk = pk(x.624)
+              = pk(x.417)
+        nr_pk = nr_pk.218
+        s_fetching_sk
+              = s_fetching_sk.220
         sig_j_eph
-              = sig_j_eph.324
+              = sign(<'j-sig-eph', j_epke_pk.215, j_eapke_pk.214>, x.417)
         sig_j_ltk
-              = sign(<'j-sig-ltk', 'g', j_apke_pk.318>, x.623)
+              = sig_j_ltk.223
         sig_j_sig_pk
-              = sign(<'nr-sig', pk(x.623)>, x.624)
+              = sig_j_sig_pk.224
+        z     = 'g'^k.418
+        x.1   = (~x.212*k.418)
+        z.1   = 'g'^s_fetching_sk.220
+        z.2   = verify(sig_j_sig_pk.224, <'nr-sig', pk(x.417)>, nr_pk.218)
+        z.3   = verify(sig_j_ltk.223, <'j-sig-ltk', 'g'^k.418, j_apke_pk.213>,
+                       pk(x.417))
+        z.4   = true
+    
+    12. ~x    = ~x.212
+        j_apke_pk
+              = j_apke_pk.213
+        j_eapke_pk
+              = j_eapke_pk.214
+        j_epke_pk
+              = j_epke_pk.215
+        j_sig_pk
+              = pk(x.417)
+        nr_pk = nr_pk.218
+        s_fetching_sk
+              = one
+        sig_j_eph
+              = sign(<'j-sig-eph', j_epke_pk.215, j_eapke_pk.214>, x.417)
+        sig_j_ltk
+              = sig_j_ltk.223
+        sig_j_sig_pk
+              = sig_j_sig_pk.224
+        z     = 'g'^k.418
+        x.1   = (~x.212*k.418)
+        z.1   = 'g'
+        z.2   = verify(sig_j_sig_pk.224, <'nr-sig', pk(x.417)>, nr_pk.218)
+        z.3   = verify(sig_j_ltk.223, <'j-sig-ltk', 'g'^k.418, j_apke_pk.213>,
+                       pk(x.417))
+        z.4   = true
+    
+    13. ~x    = ~x.212
+        j_apke_pk
+              = j_apke_pk.213
+        j_eapke_pk
+              = j_eapke_pk.214
+        j_epke_pk
+              = j_epke_pk.215
+        j_sig_pk
+              = pk(x.417)
+        nr_pk = pk(x.418)
+        s_fetching_sk
+              = s_fetching_sk.220
+        sig_j_eph
+              = sign(<'j-sig-eph', j_epke_pk.215, j_eapke_pk.214>, x.417)
+        sig_j_ltk
+              = sig_j_ltk.223
+        sig_j_sig_pk
+              = sign(<'nr-sig', pk(x.417)>, x.418)
         z     = 'g'
-        x.1   = ~x.317
-        z.1   = true
+        x.1   = ~x.212
+        z.1   = 'g'^s_fetching_sk.220
         z.2   = true
-        z.3   = verify(sig_j_eph.324,
-                       <'j-sig-eph', j_epke_pk.320, j_eapke_pk.319>, pk(x.623))
+        z.3   = verify(sig_j_ltk.223, <'j-sig-ltk', 'g', j_apke_pk.213>,
+                       pk(x.417))
+        z.4   = true
     
-    13. ~x    = ~x.317
+    14. ~x    = ~x.212
         j_apke_pk
-              = j_apke_pk.318
+              = j_apke_pk.213
         j_eapke_pk
-              = j_eapke_pk.319
+              = j_eapke_pk.214
         j_epke_pk
-              = j_epke_pk.320
+              = j_epke_pk.215
         j_sig_pk
-              = pk(x.623)
-        nr_pk = pk(x.624)
+              = pk(x.417)
+        nr_pk = pk(x.418)
+        s_fetching_sk
+              = one
         sig_j_eph
-              = sign(<'j-sig-eph', j_epke_pk.320, j_eapke_pk.319>, x.623)
+              = sign(<'j-sig-eph', j_epke_pk.215, j_eapke_pk.214>, x.417)
         sig_j_ltk
-              = sign(<'j-sig-ltk', 'g', j_apke_pk.318>, x.623)
+              = sig_j_ltk.223
         sig_j_sig_pk
-              = sign(<'nr-sig', pk(x.623)>, x.624)
+              = sign(<'nr-sig', pk(x.417)>, x.418)
         z     = 'g'
-        x.1   = ~x.317
-        z.1   = true
+        x.1   = ~x.212
+        z.1   = 'g'
+        z.2   = true
+        z.3   = verify(sig_j_ltk.223, <'j-sig-ltk', 'g', j_apke_pk.213>,
+                       pk(x.417))
+        z.4   = true
+    
+    15. ~x    = ~x.212
+        j_apke_pk
+              = j_apke_pk.213
+        j_eapke_pk
+              = j_eapke_pk.214
+        j_epke_pk
+              = j_epke_pk.215
+        j_sig_pk
+              = pk(x.418)
+        nr_pk = nr_pk.218
+        s_fetching_sk
+              = s_fetching_sk.220
+        sig_j_eph
+              = sig_j_eph.222
+        sig_j_ltk
+              = sign(<'j-sig-ltk', 'g', j_apke_pk.213>, x.418)
+        sig_j_sig_pk
+              = sig_j_sig_pk.224
+        z     = 'g'
+        x.1   = ~x.212
+        z.1   = 'g'^s_fetching_sk.220
+        z.2   = verify(sig_j_sig_pk.224, <'nr-sig', pk(x.418)>, nr_pk.218)
+        z.3   = true
+        z.4   = verify(sig_j_eph.222,
+                       <'j-sig-eph', j_epke_pk.215, j_eapke_pk.214>, pk(x.418))
+    
+    16. ~x    = ~x.212
+        j_apke_pk
+              = j_apke_pk.213
+        j_eapke_pk
+              = j_eapke_pk.214
+        j_epke_pk
+              = j_epke_pk.215
+        j_sig_pk
+              = pk(x.418)
+        nr_pk = nr_pk.218
+        s_fetching_sk
+              = s_fetching_sk.220
+        sig_j_eph
+              = sign(<'j-sig-eph', j_epke_pk.215, j_eapke_pk.214>, x.418)
+        sig_j_ltk
+              = sign(<'j-sig-ltk', 'g', j_apke_pk.213>, x.418)
+        sig_j_sig_pk
+              = sig_j_sig_pk.224
+        z     = 'g'
+        x.1   = ~x.212
+        z.1   = 'g'^s_fetching_sk.220
+        z.2   = verify(sig_j_sig_pk.224, <'nr-sig', pk(x.418)>, nr_pk.218)
+        z.3   = true
+        z.4   = true
+    
+    17. ~x    = ~x.212
+        j_apke_pk
+              = j_apke_pk.213
+        j_eapke_pk
+              = j_eapke_pk.214
+        j_epke_pk
+              = j_epke_pk.215
+        j_sig_pk
+              = pk(x.418)
+        nr_pk = nr_pk.218
+        s_fetching_sk
+              = one
+        sig_j_eph
+              = sig_j_eph.222
+        sig_j_ltk
+              = sign(<'j-sig-ltk', 'g', j_apke_pk.213>, x.418)
+        sig_j_sig_pk
+              = sig_j_sig_pk.224
+        z     = 'g'
+        x.1   = ~x.212
+        z.1   = 'g'
+        z.2   = verify(sig_j_sig_pk.224, <'nr-sig', pk(x.418)>, nr_pk.218)
+        z.3   = true
+        z.4   = verify(sig_j_eph.222,
+                       <'j-sig-eph', j_epke_pk.215, j_eapke_pk.214>, pk(x.418))
+    
+    18. ~x    = ~x.212
+        j_apke_pk
+              = j_apke_pk.213
+        j_eapke_pk
+              = j_eapke_pk.214
+        j_epke_pk
+              = j_epke_pk.215
+        j_sig_pk
+              = pk(x.418)
+        nr_pk = nr_pk.218
+        s_fetching_sk
+              = one
+        sig_j_eph
+              = sign(<'j-sig-eph', j_epke_pk.215, j_eapke_pk.214>, x.418)
+        sig_j_ltk
+              = sign(<'j-sig-ltk', 'g', j_apke_pk.213>, x.418)
+        sig_j_sig_pk
+              = sig_j_sig_pk.224
+        z     = 'g'
+        x.1   = ~x.212
+        z.1   = 'g'
+        z.2   = verify(sig_j_sig_pk.224, <'nr-sig', pk(x.418)>, nr_pk.218)
+        z.3   = true
+        z.4   = true
+    
+    19. ~x    = ~x.213
+        j_apke_pk
+              = j_apke_pk.214
+        j_eapke_pk
+              = j_eapke_pk.215
+        j_epke_pk
+              = j_epke_pk.216
+        j_sig_pk
+              = pk(x.419)
+        nr_pk = nr_pk.219
+        s_fetching_sk
+              = s_fetching_sk.221
+        sig_j_eph
+              = sig_j_eph.223
+        sig_j_ltk
+              = sign(<'j-sig-ltk', 'g'^x.420, j_apke_pk.214>, x.419)
+        sig_j_sig_pk
+              = sig_j_sig_pk.225
+        z     = 'g'^x.420
+        x.1   = (~x.213*x.420)
+        z.1   = 'g'^s_fetching_sk.221
+        z.2   = verify(sig_j_sig_pk.225, <'nr-sig', pk(x.419)>, nr_pk.219)
+        z.3   = true
+        z.4   = verify(sig_j_eph.223,
+                       <'j-sig-eph', j_epke_pk.216, j_eapke_pk.215>, pk(x.419))
+    
+    20. ~x    = ~x.213
+        j_apke_pk
+              = j_apke_pk.214
+        j_eapke_pk
+              = j_eapke_pk.215
+        j_epke_pk
+              = j_epke_pk.216
+        j_sig_pk
+              = pk(x.419)
+        nr_pk = nr_pk.219
+        s_fetching_sk
+              = s_fetching_sk.221
+        sig_j_eph
+              = sign(<'j-sig-eph', j_epke_pk.216, j_eapke_pk.215>, x.419)
+        sig_j_ltk
+              = sign(<'j-sig-ltk', 'g'^x.420, j_apke_pk.214>, x.419)
+        sig_j_sig_pk
+              = sig_j_sig_pk.225
+        z     = 'g'^x.420
+        x.1   = (~x.213*x.420)
+        z.1   = 'g'^s_fetching_sk.221
+        z.2   = verify(sig_j_sig_pk.225, <'nr-sig', pk(x.419)>, nr_pk.219)
+        z.3   = true
+        z.4   = true
+    
+    21. ~x    = ~x.213
+        j_apke_pk
+              = j_apke_pk.214
+        j_eapke_pk
+              = j_eapke_pk.215
+        j_epke_pk
+              = j_epke_pk.216
+        j_sig_pk
+              = pk(x.419)
+        nr_pk = nr_pk.219
+        s_fetching_sk
+              = one
+        sig_j_eph
+              = sig_j_eph.223
+        sig_j_ltk
+              = sign(<'j-sig-ltk', 'g'^x.420, j_apke_pk.214>, x.419)
+        sig_j_sig_pk
+              = sig_j_sig_pk.225
+        z     = 'g'^x.420
+        x.1   = (~x.213*x.420)
+        z.1   = 'g'
+        z.2   = verify(sig_j_sig_pk.225, <'nr-sig', pk(x.419)>, nr_pk.219)
+        z.3   = true
+        z.4   = verify(sig_j_eph.223,
+                       <'j-sig-eph', j_epke_pk.216, j_eapke_pk.215>, pk(x.419))
+    
+    22. ~x    = ~x.213
+        j_apke_pk
+              = j_apke_pk.214
+        j_eapke_pk
+              = j_eapke_pk.215
+        j_epke_pk
+              = j_epke_pk.216
+        j_sig_pk
+              = pk(x.419)
+        nr_pk = nr_pk.219
+        s_fetching_sk
+              = one
+        sig_j_eph
+              = sign(<'j-sig-eph', j_epke_pk.216, j_eapke_pk.215>, x.419)
+        sig_j_ltk
+              = sign(<'j-sig-ltk', 'g'^x.420, j_apke_pk.214>, x.419)
+        sig_j_sig_pk
+              = sig_j_sig_pk.225
+        z     = 'g'^x.420
+        x.1   = (~x.213*x.420)
+        z.1   = 'g'
+        z.2   = verify(sig_j_sig_pk.225, <'nr-sig', pk(x.419)>, nr_pk.219)
+        z.3   = true
+        z.4   = true
+    
+    23. ~x    = ~x.213
+        j_apke_pk
+              = j_apke_pk.214
+        j_eapke_pk
+              = j_eapke_pk.215
+        j_epke_pk
+              = j_epke_pk.216
+        j_sig_pk
+              = pk(x.419)
+        nr_pk = pk(x.420)
+        s_fetching_sk
+              = s_fetching_sk.221
+        sig_j_eph
+              = sig_j_eph.223
+        sig_j_ltk
+              = sign(<'j-sig-ltk', 'g', j_apke_pk.214>, x.419)
+        sig_j_sig_pk
+              = sign(<'nr-sig', pk(x.419)>, x.420)
+        z     = 'g'
+        x.1   = ~x.213
+        z.1   = 'g'^s_fetching_sk.221
         z.2   = true
         z.3   = true
+        z.4   = verify(sig_j_eph.223,
+                       <'j-sig-eph', j_epke_pk.216, j_eapke_pk.215>, pk(x.419))
     
-    14. ~x    = ~x.318
+    24. ~x    = ~x.213
         j_apke_pk
-              = j_apke_pk.319
+              = j_apke_pk.214
         j_eapke_pk
-              = j_eapke_pk.320
+              = j_eapke_pk.215
         j_epke_pk
-              = j_epke_pk.321
+              = j_epke_pk.216
         j_sig_pk
-              = pk(x.623)
-        nr_pk = pk(x.625)
+              = pk(x.419)
+        nr_pk = pk(x.420)
+        s_fetching_sk
+              = s_fetching_sk.221
         sig_j_eph
-              = sign(<'j-sig-eph', j_epke_pk.321, j_eapke_pk.320>, x.623)
+              = sign(<'j-sig-eph', j_epke_pk.216, j_eapke_pk.215>, x.419)
         sig_j_ltk
-              = sig_j_ltk.326
+              = sign(<'j-sig-ltk', 'g', j_apke_pk.214>, x.419)
         sig_j_sig_pk
-              = sign(<'nr-sig', pk(x.623)>, x.625)
-        z     = 'g'^k.626
-        x.1   = (~x.318*k.626)
-        z.1   = true
-        z.2   = verify(sig_j_ltk.326, <'j-sig-ltk', 'g'^k.626, j_apke_pk.319>,
-                       pk(x.623))
-        z.3   = true
-    
-    15. ~x    = ~x.318
-        j_apke_pk
-              = j_apke_pk.319
-        j_eapke_pk
-              = j_eapke_pk.320
-        j_epke_pk
-              = j_epke_pk.321
-        j_sig_pk
-              = pk(x.624)
-        nr_pk = pk(x.626)
-        sig_j_eph
-              = sig_j_eph.325
-        sig_j_ltk
-              = sign(<'j-sig-ltk', 'g'^x.625, j_apke_pk.319>, x.624)
-        sig_j_sig_pk
-              = sign(<'nr-sig', pk(x.624)>, x.626)
-        z     = 'g'^x.625
-        x.1   = (~x.318*x.625)
-        z.1   = true
-        z.2   = true
-        z.3   = verify(sig_j_eph.325,
-                       <'j-sig-eph', j_epke_pk.321, j_eapke_pk.320>, pk(x.624))
-    
-    16. ~x    = ~x.318
-        j_apke_pk
-              = j_apke_pk.319
-        j_eapke_pk
-              = j_eapke_pk.320
-        j_epke_pk
-              = j_epke_pk.321
-        j_sig_pk
-              = pk(x.624)
-        nr_pk = pk(x.626)
-        sig_j_eph
-              = sign(<'j-sig-eph', j_epke_pk.321, j_eapke_pk.320>, x.624)
-        sig_j_ltk
-              = sign(<'j-sig-ltk', 'g'^x.625, j_apke_pk.319>, x.624)
-        sig_j_sig_pk
-              = sign(<'nr-sig', pk(x.624)>, x.626)
-        z     = 'g'^x.625
-        x.1   = (~x.318*x.625)
-        z.1   = true
+              = sign(<'nr-sig', pk(x.419)>, x.420)
+        z     = 'g'
+        x.1   = ~x.213
+        z.1   = 'g'^s_fetching_sk.221
         z.2   = true
         z.3   = true
+        z.4   = true
+    
+    25. ~x    = ~x.213
+        j_apke_pk
+              = j_apke_pk.214
+        j_eapke_pk
+              = j_eapke_pk.215
+        j_epke_pk
+              = j_epke_pk.216
+        j_sig_pk
+              = pk(x.419)
+        nr_pk = pk(x.420)
+        s_fetching_sk
+              = one
+        sig_j_eph
+              = sig_j_eph.223
+        sig_j_ltk
+              = sign(<'j-sig-ltk', 'g', j_apke_pk.214>, x.419)
+        sig_j_sig_pk
+              = sign(<'nr-sig', pk(x.419)>, x.420)
+        z     = 'g'
+        x.1   = ~x.213
+        z.1   = 'g'
+        z.2   = true
+        z.3   = true
+        z.4   = verify(sig_j_eph.223,
+                       <'j-sig-eph', j_epke_pk.216, j_eapke_pk.215>, pk(x.419))
+    
+    26. ~x    = ~x.213
+        j_apke_pk
+              = j_apke_pk.214
+        j_eapke_pk
+              = j_eapke_pk.215
+        j_epke_pk
+              = j_epke_pk.216
+        j_sig_pk
+              = pk(x.419)
+        nr_pk = pk(x.420)
+        s_fetching_sk
+              = one
+        sig_j_eph
+              = sign(<'j-sig-eph', j_epke_pk.216, j_eapke_pk.215>, x.419)
+        sig_j_ltk
+              = sign(<'j-sig-ltk', 'g', j_apke_pk.214>, x.419)
+        sig_j_sig_pk
+              = sign(<'nr-sig', pk(x.419)>, x.420)
+        z     = 'g'
+        x.1   = ~x.213
+        z.1   = 'g'
+        z.2   = true
+        z.3   = true
+        z.4   = true
+    
+    27. ~x    = ~x.214
+        j_apke_pk
+              = j_apke_pk.215
+        j_eapke_pk
+              = j_eapke_pk.216
+        j_epke_pk
+              = j_epke_pk.217
+        j_sig_pk
+              = pk(x.419)
+        nr_pk = pk(x.421)
+        s_fetching_sk
+              = s_fetching_sk.222
+        sig_j_eph
+              = sign(<'j-sig-eph', j_epke_pk.217, j_eapke_pk.216>, x.419)
+        sig_j_ltk
+              = sig_j_ltk.225
+        sig_j_sig_pk
+              = sign(<'nr-sig', pk(x.419)>, x.421)
+        z     = 'g'^k.422
+        x.1   = (~x.214*k.422)
+        z.1   = 'g'^s_fetching_sk.222
+        z.2   = true
+        z.3   = verify(sig_j_ltk.225, <'j-sig-ltk', 'g'^k.422, j_apke_pk.215>,
+                       pk(x.419))
+        z.4   = true
+    
+    28. ~x    = ~x.214
+        j_apke_pk
+              = j_apke_pk.215
+        j_eapke_pk
+              = j_eapke_pk.216
+        j_epke_pk
+              = j_epke_pk.217
+        j_sig_pk
+              = pk(x.419)
+        nr_pk = pk(x.421)
+        s_fetching_sk
+              = one
+        sig_j_eph
+              = sign(<'j-sig-eph', j_epke_pk.217, j_eapke_pk.216>, x.419)
+        sig_j_ltk
+              = sig_j_ltk.225
+        sig_j_sig_pk
+              = sign(<'nr-sig', pk(x.419)>, x.421)
+        z     = 'g'^k.422
+        x.1   = (~x.214*k.422)
+        z.1   = 'g'
+        z.2   = true
+        z.3   = verify(sig_j_ltk.225, <'j-sig-ltk', 'g'^k.422, j_apke_pk.215>,
+                       pk(x.419))
+        z.4   = true
+    
+    29. ~x    = ~x.214
+        j_apke_pk
+              = j_apke_pk.215
+        j_eapke_pk
+              = j_eapke_pk.216
+        j_epke_pk
+              = j_epke_pk.217
+        j_sig_pk
+              = pk(x.420)
+        nr_pk = pk(x.422)
+        s_fetching_sk
+              = s_fetching_sk.222
+        sig_j_eph
+              = sig_j_eph.224
+        sig_j_ltk
+              = sign(<'j-sig-ltk', 'g'^x.421, j_apke_pk.215>, x.420)
+        sig_j_sig_pk
+              = sign(<'nr-sig', pk(x.420)>, x.422)
+        z     = 'g'^x.421
+        x.1   = (~x.214*x.421)
+        z.1   = 'g'^s_fetching_sk.222
+        z.2   = true
+        z.3   = true
+        z.4   = verify(sig_j_eph.224,
+                       <'j-sig-eph', j_epke_pk.217, j_eapke_pk.216>, pk(x.420))
+    
+    30. ~x    = ~x.214
+        j_apke_pk
+              = j_apke_pk.215
+        j_eapke_pk
+              = j_eapke_pk.216
+        j_epke_pk
+              = j_epke_pk.217
+        j_sig_pk
+              = pk(x.420)
+        nr_pk = pk(x.422)
+        s_fetching_sk
+              = s_fetching_sk.222
+        sig_j_eph
+              = sign(<'j-sig-eph', j_epke_pk.217, j_eapke_pk.216>, x.420)
+        sig_j_ltk
+              = sign(<'j-sig-ltk', 'g'^x.421, j_apke_pk.215>, x.420)
+        sig_j_sig_pk
+              = sign(<'nr-sig', pk(x.420)>, x.422)
+        z     = 'g'^x.421
+        x.1   = (~x.214*x.421)
+        z.1   = 'g'^s_fetching_sk.222
+        z.2   = true
+        z.3   = true
+        z.4   = true
+    
+    31. ~x    = ~x.214
+        j_apke_pk
+              = j_apke_pk.215
+        j_eapke_pk
+              = j_eapke_pk.216
+        j_epke_pk
+              = j_epke_pk.217
+        j_sig_pk
+              = pk(x.420)
+        nr_pk = pk(x.422)
+        s_fetching_sk
+              = one
+        sig_j_eph
+              = sig_j_eph.224
+        sig_j_ltk
+              = sign(<'j-sig-ltk', 'g'^x.421, j_apke_pk.215>, x.420)
+        sig_j_sig_pk
+              = sign(<'nr-sig', pk(x.420)>, x.422)
+        z     = 'g'^x.421
+        x.1   = (~x.214*x.421)
+        z.1   = 'g'
+        z.2   = true
+        z.3   = true
+        z.4   = verify(sig_j_eph.224,
+                       <'j-sig-eph', j_epke_pk.217, j_eapke_pk.216>, pk(x.420))
+    
+    32. ~x    = ~x.214
+        j_apke_pk
+              = j_apke_pk.215
+        j_eapke_pk
+              = j_eapke_pk.216
+        j_epke_pk
+              = j_epke_pk.217
+        j_sig_pk
+              = pk(x.420)
+        nr_pk = pk(x.422)
+        s_fetching_sk
+              = one
+        sig_j_eph
+              = sign(<'j-sig-eph', j_epke_pk.217, j_eapke_pk.216>, x.420)
+        sig_j_ltk
+              = sign(<'j-sig-ltk', 'g'^x.421, j_apke_pk.215>, x.420)
+        sig_j_sig_pk
+              = sign(<'nr-sig', pk(x.420)>, x.422)
+        z     = 'g'^x.421
+        x.1   = (~x.214*x.421)
+        z.1   = 'g'
+        z.2   = true
+        z.3   = true
+        z.4   = true
   */
 
 rule (modulo E) Source_Query[color=#58a820]:
    [
-   !LongTerm_Source_Key( $S, ~s_fetching_sk, ~s_pke_sk, ~s_apke_sk ),
+   !LongTerm_Source_Key( s_fetching_sk, s_pke_sk, s_apke_sk ),
    !Public_Newsroom_Key( $NR, nr_pk ), Fr( ~sess )
    ]
   --[ ClientSource( 'request' ), PrePQAttack( ), ClientSession( ~sess ) ]->
    [
    Client_Out( ~sess, $NR, 'request' ),
-   SourceQueried( $S, $NR, ~sess, ~s_fetching_sk )
+   SourceQueried( $S, $NR, ~sess, s_fetching_sk )
    ]
 
   /* has exactly the trivial AC variant */
@@ -990,19 +1499,19 @@ rule (modulo E) Source_Recv[color=#58a820]:
    In( <j_sig_pk, j_fetching_pk, j_apke_pk, sig_j_sig_pk, sig_j_ltk> ),
    !APKE_MessageSpace( <'submission', m> ),
    !PKE_MessageSpace( <'pk', j_apke_pk> ),
-   !LongTerm_Source_Key( $S, ~s_fetching_sk, ~s_pke_sk, ~s_apke_sk ),
+   !LongTerm_Source_Key( s_fetching_sk, s_pke_sk, s_apke_sk ),
    !Public_Newsroom_Key( $NR, nr_pk )
    ]
   --[
-  APKE_Dec( ct1, j_apke_pk, ~s_apke_sk, $NR, 'g'^~s_fetching_sk,
+  APKE_Dec( ct1, j_apke_pk, s_apke_sk, $NR, 'g'^s_fetching_sk,
             <'submission', m>
   ),
-  PKE_Dec( ct2, ~s_pke_sk, <'pk', j_apke_pk> ),
+  PKE_Dec( ct2, s_pke_sk, <'pk', j_apke_pk> ),
   Eq( verify(sig_j_sig_pk, <'nr-sig', j_sig_pk>, nr_pk), true ),
   Eq( verify(sig_j_ltk, <'j-sig-ltk', j_fetching_pk, j_apke_pk>, j_sig_pk),
       true
   ),
-  Source_Received( pk(~s_apke_sk), 'g'^~s_fetching_sk, j_apke_pk, $NR, m ),
+  Source_Received( pk(s_apke_sk), 'g'^s_fetching_sk, j_apke_pk, $NR, m ),
   PrePQAttack( ), ClientSession( ~sess )
   ]->
    [ ]
@@ -1014,77 +1523,156 @@ rule (modulo E) Source_Recv[color=#58a820]:
      In( <j_sig_pk, j_fetching_pk, j_apke_pk, sig_j_sig_pk, sig_j_ltk> ),
      !APKE_MessageSpace( <'submission', m> ),
      !PKE_MessageSpace( <'pk', j_apke_pk> ),
-     !LongTerm_Source_Key( $S, ~s_fetching_sk, ~s_pke_sk, ~s_apke_sk ),
+     !LongTerm_Source_Key( s_fetching_sk, s_pke_sk, s_apke_sk ),
      !Public_Newsroom_Key( $NR, nr_pk )
      ]
     --[
-    APKE_Dec( ct1, j_apke_pk, ~s_apke_sk, $NR, 'g'^~s_fetching_sk,
-              <'submission', m>
-    ),
-    PKE_Dec( ct2, ~s_pke_sk, <'pk', j_apke_pk> ), Eq( z, true ),
-    Eq( z.1, true ),
-    Source_Received( pk(~s_apke_sk), 'g'^~s_fetching_sk, j_apke_pk, $NR, m ),
+    APKE_Dec( ct1, j_apke_pk, s_apke_sk, $NR, z, <'submission', m> ),
+    PKE_Dec( ct2, s_pke_sk, <'pk', j_apke_pk> ), Eq( z.1, true ),
+    Eq( z.2, true ), Source_Received( pk(s_apke_sk), z, j_apke_pk, $NR, m ),
     PrePQAttack( ), ClientSession( ~sess )
     ]->
      [ ]
     variants (modulo AC)
     1. j_apke_pk
-             = j_apke_pk.28
+             = j_apke_pk.31
        j_fetching_pk
-             = j_fetching_pk.29
+             = j_fetching_pk.32
        j_sig_pk
-             = j_sig_pk.30
-       nr_pk = nr_pk.32
+             = j_sig_pk.33
+       nr_pk = nr_pk.35
+       s_fetching_sk
+             = s_fetching_sk.37
        sig_j_ltk
-             = sig_j_ltk.33
+             = sig_j_ltk.39
        sig_j_sig_pk
-             = sig_j_sig_pk.34
-       z     = verify(sig_j_sig_pk.34, <'nr-sig', j_sig_pk.30>, nr_pk.32)
-       z.1   = verify(sig_j_ltk.33,
-                      <'j-sig-ltk', j_fetching_pk.29, j_apke_pk.28>, j_sig_pk.30)
+             = sig_j_sig_pk.40
+       z     = 'g'^s_fetching_sk.37
+       z.1   = verify(sig_j_sig_pk.40, <'nr-sig', j_sig_pk.33>, nr_pk.35)
+       z.2   = verify(sig_j_ltk.39,
+                      <'j-sig-ltk', j_fetching_pk.32, j_apke_pk.31>, j_sig_pk.33)
     
     2. j_apke_pk
-             = j_apke_pk.115
+             = j_apke_pk.31
        j_fetching_pk
-             = j_fetching_pk.116
+             = j_fetching_pk.32
        j_sig_pk
-             = j_sig_pk.117
-       nr_pk = pk(x.220)
+             = j_sig_pk.33
+       nr_pk = nr_pk.35
+       s_fetching_sk
+             = one
        sig_j_ltk
-             = sig_j_ltk.120
+             = sig_j_ltk.39
        sig_j_sig_pk
-             = sign(<'nr-sig', j_sig_pk.117>, x.220)
-       z     = true
-       z.1   = verify(sig_j_ltk.120,
-                      <'j-sig-ltk', j_fetching_pk.116, j_apke_pk.115>, j_sig_pk.117)
+             = sig_j_sig_pk.40
+       z     = 'g'
+       z.1   = verify(sig_j_sig_pk.40, <'nr-sig', j_sig_pk.33>, nr_pk.35)
+       z.2   = verify(sig_j_ltk.39,
+                      <'j-sig-ltk', j_fetching_pk.32, j_apke_pk.31>, j_sig_pk.33)
     
     3. j_apke_pk
-             = j_apke_pk.115
+             = j_apke_pk.39
        j_fetching_pk
-             = j_fetching_pk.116
+             = j_fetching_pk.40
        j_sig_pk
-             = pk(x.220)
-       nr_pk = nr_pk.119
+             = j_sig_pk.41
+       nr_pk = pk(x.71)
+       s_fetching_sk
+             = s_fetching_sk.45
        sig_j_ltk
-             = sign(<'j-sig-ltk', j_fetching_pk.116, j_apke_pk.115>, x.220)
+             = sig_j_ltk.47
        sig_j_sig_pk
-             = sig_j_sig_pk.121
-       z     = verify(sig_j_sig_pk.121, <'nr-sig', pk(x.220)>, nr_pk.119)
+             = sign(<'nr-sig', j_sig_pk.41>, x.71)
+       z     = 'g'^s_fetching_sk.45
        z.1   = true
+       z.2   = verify(sig_j_ltk.47,
+                      <'j-sig-ltk', j_fetching_pk.40, j_apke_pk.39>, j_sig_pk.41)
     
     4. j_apke_pk
-             = j_apke_pk.117
+             = j_apke_pk.39
        j_fetching_pk
-             = j_fetching_pk.118
+             = j_fetching_pk.40
        j_sig_pk
-             = pk(x.222)
-       nr_pk = pk(x.224)
+             = j_sig_pk.41
+       nr_pk = pk(x.71)
+       s_fetching_sk
+             = one
        sig_j_ltk
-             = sign(<'j-sig-ltk', j_fetching_pk.118, j_apke_pk.117>, x.222)
+             = sig_j_ltk.47
        sig_j_sig_pk
-             = sign(<'nr-sig', pk(x.222)>, x.224)
-       z     = true
+             = sign(<'nr-sig', j_sig_pk.41>, x.71)
+       z     = 'g'
        z.1   = true
+       z.2   = verify(sig_j_ltk.47,
+                      <'j-sig-ltk', j_fetching_pk.40, j_apke_pk.39>, j_sig_pk.41)
+    
+    5. j_apke_pk
+             = j_apke_pk.39
+       j_fetching_pk
+             = j_fetching_pk.40
+       j_sig_pk
+             = pk(x.71)
+       nr_pk = nr_pk.43
+       s_fetching_sk
+             = s_fetching_sk.45
+       sig_j_ltk
+             = sign(<'j-sig-ltk', j_fetching_pk.40, j_apke_pk.39>, x.71)
+       sig_j_sig_pk
+             = sig_j_sig_pk.48
+       z     = 'g'^s_fetching_sk.45
+       z.1   = verify(sig_j_sig_pk.48, <'nr-sig', pk(x.71)>, nr_pk.43)
+       z.2   = true
+    
+    6. j_apke_pk
+             = j_apke_pk.39
+       j_fetching_pk
+             = j_fetching_pk.40
+       j_sig_pk
+             = pk(x.71)
+       nr_pk = nr_pk.43
+       s_fetching_sk
+             = one
+       sig_j_ltk
+             = sign(<'j-sig-ltk', j_fetching_pk.40, j_apke_pk.39>, x.71)
+       sig_j_sig_pk
+             = sig_j_sig_pk.48
+       z     = 'g'
+       z.1   = verify(sig_j_sig_pk.48, <'nr-sig', pk(x.71)>, nr_pk.43)
+       z.2   = true
+    
+    7. j_apke_pk
+             = j_apke_pk.41
+       j_fetching_pk
+             = j_fetching_pk.42
+       j_sig_pk
+             = pk(x.73)
+       nr_pk = pk(x.75)
+       s_fetching_sk
+             = s_fetching_sk.47
+       sig_j_ltk
+             = sign(<'j-sig-ltk', j_fetching_pk.42, j_apke_pk.41>, x.73)
+       sig_j_sig_pk
+             = sign(<'nr-sig', pk(x.73)>, x.75)
+       z     = 'g'^s_fetching_sk.47
+       z.1   = true
+       z.2   = true
+    
+    8. j_apke_pk
+             = j_apke_pk.41
+       j_fetching_pk
+             = j_fetching_pk.42
+       j_sig_pk
+             = pk(x.73)
+       nr_pk = pk(x.75)
+       s_fetching_sk
+             = one
+       sig_j_ltk
+             = sign(<'j-sig-ltk', j_fetching_pk.42, j_apke_pk.41>, x.73)
+       sig_j_sig_pk
+             = sign(<'nr-sig', pk(x.73)>, x.75)
+       z     = 'g'
+       z.1   = true
+       z.2   = true
   */
 
 rule (modulo E) Journalist_Query[color=#0a0aff]:
@@ -1555,24 +2143,21 @@ solve( !LongTerm_Journalist_SIG_Key( $NR, $J, ~j_sig_sk ) ▶₁ #t )
       case Journalist_Register_Ephemeral_Key
       solve( Client_In( ~sess, $NR,
                         <
-                         APKE_Enc(~s_apke_sk, pk(~j_eapke_sk),
+                         APKE_Enc(kdf(<'apke', ~passphrase>), pk(~j_eapke_sk),
                                   <'submission', s_fetch_pk, s_pke_pk, m>, $NR, 'g'^~j_fetching_sk), 
                          ct2>
              ) ▶₄ #t )
         case ServerToClient_case_1
         solve( !Submission( $NR, ~id,
                             <
-                             APKE_Enc(~s_apke_sk, pk(~j_eapke_sk),
+                             APKE_Enc(kdf(<'apke', ~passphrase>), pk(~j_eapke_sk),
                                       <'submission', s_fetch_pk, s_pke_pk, m>, $NR, 'g'^~j_fetching_sk), 
                              ct2, z, z.1>
                ) ▶₁ #vr.6 )
           case AdversarySubmit
-          solve( !KU( APKE_Enc(~s_apke_sk, pk(~j_eapke_sk),
+          solve( !KU( APKE_Enc(kdf(<'apke', ~passphrase>), pk(~j_eapke_sk),
                                <'submission', s_fetch_pk, s_pke_pk, m>, $NR, 'g'^~j_fetching_sk)
                  ) @ #vk.1 )
-            case APKE_OutsiderAuth1
-            by contradiction /* from formulas */
-          next
             case ServerToAdversaryClient_case_01
             by contradiction /* from formulas */
           next
@@ -1642,12 +2227,9 @@ solve( !LongTerm_Journalist_SIG_Key( $NR, $J, ~j_sig_sk ) ▶₁ #t )
         by contradiction /* from formulas */
       next
         case ServerToClient_case_5
-        solve( !KU( APKE_Enc(~s_apke_sk, pk(~j_eapke_sk),
+        solve( !KU( APKE_Enc(kdf(<'apke', ~passphrase>), pk(~j_eapke_sk),
                              <'submission', s_fetch_pk, s_pke_pk, m>, $NR, 'g'^~j_fetching_sk)
                ) @ #vk.1 )
-          case APKE_OutsiderAuth1
-          by contradiction /* from formulas */
-        next
           case ServerToAdversaryClient_case_01
           by contradiction /* from formulas */
         next
@@ -1742,8 +2324,7 @@ guarded formula characterizing all counter-examples:
   (∀ #x. (Reveal_Newsroom_Key( nr ) @ #x) ⇒ ¬(#x < #t))"
 */
 simplify
-solve( !LongTerm_Source_Key( $S, ~s_fetching_sk, ~s_pke_sk, ~s_apke_sk
-       ) ▶₅ #t )
+solve( !LongTerm_Source_Key( s_fetching_sk, s_pke_sk, s_apke_sk ) ▶₅ #t )
   case Register_Source_Passphrase
   solve( !Public_Newsroom_Key( $NR, pk(x.1) ) ▶₆ #t )
     case Register_Newsroom_Key
@@ -1754,24 +2335,21 @@ solve( !LongTerm_Source_Key( $S, ~s_fetching_sk, ~s_pke_sk, ~s_apke_sk
         case Journalist_Enrollment
         solve( Client_In( ~sess, $NR,
                           <
-                           APKE_Enc(~j_apke_sk, pk(~s_apke_sk), <'submission', m>, $NR,
-                                    'g'^~s_fetching_sk), 
+                           APKE_Enc(~j_apke_sk, pk(kdf(<'apke', ~passphrase>)), <'submission', m>,
+                                    $NR, 'g'^kdf(<'fetch', ~passphrase>)), 
                            ct2>
                ) ▶₁ #t )
           case ServerToClient_case_1
           solve( !Submission( $NR, ~id,
                               <
-                               APKE_Enc(~j_apke_sk, pk(~s_apke_sk), <'submission', m>, $NR,
-                                        'g'^~s_fetching_sk), 
+                               APKE_Enc(~j_apke_sk, pk(kdf(<'apke', ~passphrase>)), <'submission', m>,
+                                        $NR, 'g'^kdf(<'fetch', ~passphrase>)), 
                                ct2, z, z.1>
                  ) ▶₁ #vr.11 )
             case AdversarySubmit
-            solve( !KU( APKE_Enc(~j_apke_sk, pk(~s_apke_sk), <'submission', m>, $NR,
-                                 'g'^~s_fetching_sk)
+            solve( !KU( APKE_Enc(~j_apke_sk, pk(kdf(<'apke', ~passphrase>)),
+                                 <'submission', m>, $NR, 'g'^kdf(<'fetch', ~passphrase>))
                    ) @ #vk.10 )
-              case APKE_OutsiderAuth1
-              by contradiction /* from formulas */
-            next
               case ServerToAdversaryClient_case_0001
               by contradiction /* from formulas */
             next
@@ -12155,12 +12733,9 @@ solve( !LongTerm_Source_Key( $S, ~s_fetching_sk, ~s_pke_sk, ~s_apke_sk
           by contradiction /* from formulas */
         next
           case ServerToClient_case_5
-          solve( !KU( APKE_Enc(~j_apke_sk, pk(~s_apke_sk), <'submission', m>, $NR,
-                               'g'^~s_fetching_sk)
+          solve( !KU( APKE_Enc(~j_apke_sk, pk(kdf(<'apke', ~passphrase>)),
+                               <'submission', m>, $NR, 'g'^kdf(<'fetch', ~passphrase>))
                  ) @ #vk.10 )
-            case APKE_OutsiderAuth1
-            by contradiction /* from formulas */
-          next
             case ServerToAdversaryClient_case_0001
             by contradiction /* from formulas */
           next
