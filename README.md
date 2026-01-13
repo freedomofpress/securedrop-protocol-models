@@ -1,18 +1,30 @@
 # A Formal Analysis of the SecureDrop Protocol
 
 This repository contains the Tamarin models for the SecureDrop protocol.
-The proofs have been constructed using `Tamarin 1.10.0`.
+The proofs have been constructed using the current Tamarin development version at commit [`df2fd84dbb3b3def8309c2a84c04d653d7c4db77`](https://github.com/tamarin-prover/tamarin-prover/tree/df2fd84dbb3b3def8309c2a84c04d653d7c4db77).
 The GUI can be started on your local machine with the command `make interactive` if Tamarin is installed.
 
 ## Setup
 
-To use construct and verify proofs and install Tamarin, we require the `make`, `curl`, `tar` and `unzip` commands.
-We provide a command to install all required binaries for Linux (tested with Ubuntu 24.04).
-To install Tamarin in the `./tools` directory, run:
+Our proofs require optimizations to Tamarin that have not been integrated into an official release yet.
+Thus, you must compile Tamarin from source to construct or verify proofs.
+To do so, follow the instructions here: https://tamarin-prover.com/install.html
+
+First, you mist install Tamarin's dependencies.
+You can find further documentation when following the link above.
+Second, compile Tamarin from the `develop` branch.
+As of writing, that is commit `df2fd84dbb3b3def8309c2a84c04d653d7c4db77`.
+You can compile Tamarin by executing the following commands:
 
 ```sh
-make setup
+git clone https://github.com/tamarin-prover/tamarin-prover
+cd tamarin-prover/
+git checkout df2fd84dbb3b3def8309c2a84c04d653d7c4db77
+curl -sSL https://get.haskellstack.org/ | sh  # install Haskell stack
+make
 ```
+
+After all that, add the resulting `tamarin-prover` binary to your `PATH`, or provide its path to `make` using the `TAMARIN_RELEASE` environment variable.
 
 ## Repository Structure
 
@@ -30,5 +42,5 @@ The file will contain proofs for all lemmas that have a prefix `PREFIX`.
 You can verify constructed or stored proofs by executing:
 
 ```sh
-./check.sh proof/FILE
+tamarin-prover --derivcheck-timeout=0 proof/FILE
 ```
