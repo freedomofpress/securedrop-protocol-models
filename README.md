@@ -6,6 +6,7 @@ The GUI can be started on your local machine with the command `make interactive`
 
 ## Setup
 
+To use construct and verify proofs and install Tamarin, we require the `make`, `curl`, `tar` and `unzip` commands.
 We provide a command to install all required binaries for Linux (tested with Ubuntu 24.04).
 To install Tamarin in the `./tools` directory, run:
 
@@ -22,10 +23,12 @@ make setup
 | `oracle.py` | Custom heuristics for proof search. |
 | `securedrop.spthy` | Protocol model file. |
 
+## Proof Construction and Verification
+
 To construct proofs, run `make proof/PREFIX.spthy`.
 The file will contain proofs for all lemmas that have a prefix `PREFIX`.
 You can verify constructed or stored proofs by executing:
 
 ```sh
-./check proof/FILE
+./check.sh proof/FILE
 ```
