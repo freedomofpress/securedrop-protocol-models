@@ -4,6 +4,15 @@ This repository contains the Tamarin models for the SecureDrop protocol.
 The proofs have been constructed using `Tamarin 1.10.0`.
 The GUI can be started on your local machine with the command `make interactive` if Tamarin is installed.
 
+## Setup
+
+We provide a command to install all required binaries for Linux (tested with Ubuntu 24.04).
+To install Tamarin in the `./tools` directory, run:
+
+```sh
+make setup
+```
+
 ## Repository Structure
 
 | File | Description |
@@ -18,5 +27,5 @@ The file will contain proofs for all lemmas that have a prefix `PREFIX`.
 You can verify constructed or stored proofs by executing:
 
 ```sh
-tamarin-prover --derivcheck-timeout=0 proof/FILE
+./check proof/FILE
 ```
