@@ -38,7 +38,7 @@ After all that, add the resulting `tamarin-prover` binary to your `PATH`, or pro
 |------|-------------|
 | `parts/` | Models for cryptographic primitives and the secure channel. |
 | `proof/*` | Proofs for each lemma that has a prefix matching the respective file name.
-| `oracle.py` | Custom heuristics for proof search. |
+| `oracle.py` | Custom heuristics for proof search.  You may need to make this executable with `chmod +x oracle.py`. |
 | `securedrop.spthy` | Protocol model file. |
 
 ## Proof Construction and Verification
