@@ -1,8 +1,12 @@
 # A Formal Analysis of the SecureDrop Protocol
 
-This repository contains the Tamarin models for the SecureDrop protocol.
+This repository contains the Tamarin models for the [SecureDrop Protocol], based on [prior work by Luca Maier](https://github.com/lumaier/securedrop-formalanalysis).  For background on this project, see the [`freedomofpress/securedrop-protocol`][SecureDrop Protocol] repository.
+
 The proofs have been constructed using the current Tamarin development version at commit [`df2fd84dbb3b3def8309c2a84c04d653d7c4db77`](https://github.com/tamarin-prover/tamarin-prover/tree/df2fd84dbb3b3def8309c2a84c04d653d7c4db77).
 The GUI can be started on your local machine with the command `make interactive` if Tamarin is installed.
+
+[SecureDrop Protocol]: https://github.com/freedomofpress/securedrop-protocol
+
 
 ## Setup
 
