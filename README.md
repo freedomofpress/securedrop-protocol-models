@@ -2,7 +2,7 @@
 
 This repository contains the Tamarin models for the [SecureDrop Protocol], based on [prior work by Luca Maier](https://github.com/lumaier/securedrop-formalanalysis).  For background on this project, see the [`freedomofpress/securedrop-protocol`][SecureDrop Protocol] repository.
 
-The proofs have been constructed using the current Tamarin development version at commit [`df2fd84dbb3b3def8309c2a84c04d653d7c4db77`](https://github.com/tamarin-prover/tamarin-prover/tree/df2fd84dbb3b3def8309c2a84c04d653d7c4db77).
+The proofs have been constructed using the Tamarin prover, version 1.12, and Maude version 3.5.
 The GUI can be started on your local machine with the command `make interactive` if Tamarin is installed.
 
 [SecureDrop Protocol]: https://github.com/freedomofpress/securedrop-protocol
@@ -10,31 +10,11 @@ The GUI can be started on your local machine with the command `make interactive`
 
 ## Setup
 
-Our proofs require optimizations to Tamarin that have not been integrated into an official release yet.
-Thus, you must compile Tamarin from source to construct or verify proofs.
-To do so, follow the instructions here: https://tamarin-prover.com/install.html
+To verify constructed proofs, you must install Tamarin at version 1.12.
+We refer to the [official documentation](https://tamarin-prover.com/manual/master/book/002_installation.html) for installation instructions.
+Add `tamarin-prover` to your `PATH`, or provide its path to `make` using the `TAMARIN_RELEASE` environment variable.
 
-First, you must install Tamarin's dependencies, including [maude](https://maude.cs.illinois.edu/get-maude), and have add it to your `PATH`.
-
-```sh
-curl -OL https://github.com/maude-lang/Maude/releases/download/Maude3.5/Maude-3.5-linux-x86_64.zip
-unzip -o Maude-3.5-linux-x86_64.zip
-```
-
-You can find further documentation when following the link above.
-Second, compile Tamarin from the `develop` branch.
-As of writing, that is commit `df2fd84dbb3b3def8309c2a84c04d653d7c4db77`.
-You can compile Tamarin by executing the following commands:
-
-```sh
-git clone https://github.com/tamarin-prover/tamarin-prover
-cd tamarin-prover/
-git checkout df2fd84dbb3b3def8309c2a84c04d653d7c4db77
-curl -sSL https://get.haskellstack.org/ | sh  # install Haskell stack
-make
-```
-
-After all that, add the resulting `tamarin-prover` binary to your `PATH`, or provide its path to `make` using the `TAMARIN_RELEASE` environment variable.
+If you want to explore the model in interactive mode or construct proofs, you must also install [python 3](https://www.python.org/downloads/).
 
 ## Repository Structure
 
