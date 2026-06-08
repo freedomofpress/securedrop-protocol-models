@@ -29,11 +29,8 @@ If you want to explore the model in interactive mode or construct proofs, you mu
 
 To construct proofs, run `make proof/PREFIX.spthy`.
 The file will contain proofs for all lemmas that have a prefix `PREFIX`.
-You can verify constructed or stored proofs by executing:
-
-```sh
-tamarin-prover --derivcheck-timeout=0 proof/FILE
-```
+You can verify stored proofs, run `make proof/PREFIX.log`.
+This will verify the proof stored in `proof/PREFIX.spthy`, and store the Tamarin log in `proof/PREFIX.log`.
 
 ### Computation Cost
 
