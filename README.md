@@ -50,7 +50,7 @@ Time format is `HH:MM:SS`.
 `proof/Executability.spthy` | 05:01:33 | 01:20:19 | 01:59:56 | 107.4 GB |
 `proof/Secrecy_.spthy` | 04:44:56 | 01:18:35 | 01:44:26 | 112.1 GB |
 
-Note that you machine may require less physical memory than the maximum resident set size indicates as Tamarin can be quite inefficient in its use of virtual memory.
+Note that your machine may require less physical memory than the maximum resident set size indicates as Tamarin can be quite inefficient in its use of virtual memory.
 Tamarin traverses proofs using depth-first search and thus typically only needs access to the current proof path, but will store also all previous proofs and paths of lemmas already constructed.
 For example, on MacOS we observed physical memory use that is 10% of the virtual memory use.
 
