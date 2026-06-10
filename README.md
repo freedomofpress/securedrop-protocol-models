@@ -35,19 +35,24 @@ This will verify the proof stored in `proof/PREFIX.spthy`, and store the Tamarin
 ### Computation Cost
 
 Constructing and verifying proofs is computationally quite expensive.
-We note approximate computation cost below.
-Proofs were timed on a machine running Ubuntu 24.04, and with 252 GB of memory and two Intel Xeon E5-2650 v4 CPUs, i.e., a 48-thread server.
+We note approximate computation cost below, which were obtained by timing proof verification on two machines:
+
+- Machine A: Ubuntu 24.04, with 252 GB of memory, and two Intel Xeon E5-2650 v4 CPUs (48 threads).
+- Machine B: Ubuntu 26.04, 32 GB of memory, a 200 GB swap file, and an 8-core virtual CPU.
+
 Time format is `HH:MM:SS`.
-
-| File | User | System | Elapsed | Max Resident Set Size |
-| ---- | ---- | ------ | ------- | --------------------- |
-`proof/Agreement_.spthy` | 04:30:08 | 01:13:10 | 01:38:39 | 102.6 GB |
-`proof/Auto_.spthy` | 12:18:53 | 03:25:39 | 05:17:23 | 165.8 GB |
-`proof/Easy_.spthy` | 08:25:13 | 02:10:56 | 03:12:20 | 126.5  GB |
-`proof/Executability.spthy` | 05:01:33 | 01:20:19 | 01:59:56 | 107.4 GB |
-`proof/Secrecy_.spthy` | 04:44:56 | 01:18:35 | 01:44:26 | 112.1 GB |
-
-Note that your machine may require less physical memory than the maximum resident set size indicates as Tamarin can be quite inefficient in its use of virtual memory.
+Note that a large swap file is required as Tamarin can be quite inefficient in its use of virtual memory.
 Tamarin traverses proofs using depth-first search and thus typically only needs access to the current proof path, but will store also all previous proofs and paths of lemmas already constructed.
-For example, on MacOS we observed physical memory use that is 10% of the virtual memory use.
 
+| Machine | File | User | System | Elapsed | Max Resident Set Size |
+| ------- | ---- | ---- | ------ | ------- | --------------------- |
+| A | `proof/Agreement_.spthy` | 04:30:08 | 01:13:10 | 01:38:39 | 102.6 GB |
+| A | `proof/Auto_.spthy` | 12:18:53 | 03:25:39 | 05:17:23 | 165.8 GB |
+| A | `proof/Easy_.spthy` | 08:25:13 | 02:10:56 | 03:12:20 | 126.5  GB |
+| A | `proof/Executability.spthy` | 05:01:33 | 01:20:19 | 01:59:56 | 107.4 GB |
+| A | `proof/Secrecy_.spthy` | 04:44:56 | 01:18:35 | 01:44:26 | 112.1 GB |
+| B | `proof/Agreement_.spthy` | 01:49:00 | 00:28:34 | 01:06:07 | 30 GB |
+| B | `proof/Auto_.spthy` | 05:08:43 | 02:42:43 | 07:22:20 | 30 GB |
+| B | `proof/Easy_.spthy` | 03:37:03 | 01:46:27 | 04:39:35 | 30 GB |
+| B | `proof/Executability.spthy` | 01:55:26 | 00:37:20 | 01:27:26 | 30 GB |
+| B | `proof/Secrecy_.spthy` | 01:49:26 | 00:28:22 | 01:06:19 | 30 GB |
