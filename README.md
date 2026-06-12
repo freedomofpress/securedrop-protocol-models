@@ -56,3 +56,29 @@ Tamarin traverses proofs using depth-first search and thus typically only needs 
 | B | `proof/Easy_.spthy` | 03:37:03 | 01:46:27 | 04:39:35 | 30 GB |
 | B | `proof/Executability.spthy` | 01:55:26 | 00:37:20 | 01:27:26 | 30 GB |
 | B | `proof/Secrecy_.spthy` | 01:49:26 | 00:28:22 | 01:06:19 | 30 GB |
+
+### Running on HPC
+
+If you have access to an HPC cluster, you can construct and verify proofs inside
+an Apptainer container.  For example, from the root of this repository, via
+Slurm:
+
+1. Build the container:
+    ```bash
+    apptainer build --fakeroot tamarin.sif hpc/tamarin.def
+    ```
+
+2. Run the well-formedness checks:
+    ```bash
+    salloc --nodes 1 --ntasks 1 --mem=10G --time=1:00:00 apptainer exec tamarin.sif bash -c 'ulimit -Sn $(ulimit -Hn); make well-formed'
+    ```
+
+3. Verify a proof:
+    ```bash
+    salloc --nodes=1 --ntasks=1 --cpus-per-task=10 --mem=192G --time=12:00:00 apptainer exec tamarin.sif bash -c 'ulimit -Sn $(ulimit -Hn); make proof/Auto_.log'
+    ```
+
+You can also run batch jobs to:
+
+- Verify all proofs: `sbatch hpc/verify.sbatch`
+- Reconstruct all proofs: `sbatch hpc/prove.sbatch`
