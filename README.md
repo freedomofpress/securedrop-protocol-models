@@ -77,3 +77,8 @@ Slurm:
     ```bash
     salloc --nodes=1 --ntasks=1 --cpus-per-task=10 --mem=192G --time=12:00:00 apptainer exec tamarin.sif bash -c 'ulimit -Sn $(ulimit -Hn); make proof/Auto_.log'
     ```
+
+You can also run batch jobs to:
+
+- Verify all proofs: `sbatch hpc/verify.sbatch`
+- Reconstruct all proofs: `sbatch hpc/prove.sbatch`
