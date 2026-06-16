@@ -14,7 +14,7 @@ proof/%.spthy: securedrop.spthy oracle.py parts/*.spthy
 	mkdir -p proof
 	@$(TAMARIN_RELEASE) +RTS -N$(N_THREADS) -RTS --derivcheck-timeout=0 --prove="$**" --output="$@" "securedrop.spthy"
 
-proof/%.log: proof/*.spthy
+proof/%.log: proof/%.spthy
 	@$(TAMARIN_RELEASE) +RTS -N$(N_THREADS) -RTS --derivcheck-timeout=0 "proof/$*.spthy" > "proof/$*.log" 2>&1
 
 debug/%.spthy: securedrop.spthy oracle.py parts/*.spthy

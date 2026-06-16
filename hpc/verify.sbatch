@@ -18,8 +18,9 @@ PREFIXES=(Agreement_ Auto_ Easy_ Executability Secrecy_)
 PREFIX="${PREFIXES[$SLURM_ARRAY_TASK_ID]}"
 
 cd "$SLURM_SUBMIT_DIR"
+touch proof/*.spthy
 
 echo "Verifying proof/${PREFIX}.log on $(hostname) with ${SLURM_CPUS_PER_TASK} threads"
 
 apptainer exec "$SIF" bash -c \
-    "ulimit -Sn \$(ulimit -Hn); make N_THREADS=${SLURM_CPUS_PER_TASK} -B proof/${PREFIX}.log"
+    "ulimit -Sn \$(ulimit -Hn); make N_THREADS=${SLURM_CPUS_PER_TASK} proof/${PREFIX}.log"
