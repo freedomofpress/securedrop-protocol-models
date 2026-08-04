@@ -16,6 +16,13 @@ Add `tamarin-prover` to your `PATH`, or provide its path to `make` using the `TA
 
 If you want to explore the model in interactive mode or construct proofs, you must also install [python 3](https://www.python.org/downloads/).
 
+A containerized environment is also available, for example via Docker:
+
+```bash
+docker build --tag tamarin hpc
+docker run --rm --volume "$PWD:/workspace" tamarin --version
+```
+
 ## Repository Structure
 
 | File | Description |
