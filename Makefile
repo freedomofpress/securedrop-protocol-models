@@ -10,6 +10,9 @@ well-formed:
 interactive:
 	@$(TAMARIN_RELEASE) +RTS -N$(N_THREADS) -RTS interactive --image-format=SVG --derivcheck-timeout=0 --port=$(PORT) "./"
 
+# Keep make from deleting a freshly constructed proof as an intermediate file.
+.SECONDARY:
+
 proof/%.spthy: securedrop.spthy oracle.py parts/*.spthy
 	mkdir -p proof
 	@$(TAMARIN_RELEASE) +RTS -N$(N_THREADS) -RTS --derivcheck-timeout=0 --prove="$**" --output="$@" "securedrop.spthy"

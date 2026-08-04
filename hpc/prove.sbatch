@@ -22,4 +22,6 @@ cd "$SLURM_SUBMIT_DIR"
 echo "Constructing proof/${PREFIX}.spthy on $(hostname) with ${SLURM_CPUS_PER_TASK} threads"
 
 apptainer exec "$SIF" bash -c \
-    "ulimit -Sn \$(ulimit -Hn); make N_THREADS=${SLURM_CPUS_PER_TASK} -B proof/${PREFIX}.spthy"
+    "ulimit -Sn \$(ulimit -Hn); make N_THREADS=${SLURM_CPUS_PER_TASK} \
+    -B \
+    proof/${PREFIX}.spthy"
