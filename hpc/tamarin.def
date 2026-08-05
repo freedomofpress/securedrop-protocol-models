@@ -1,0 +1,25 @@
+Bootstrap: docker
+From: debian:trixie-slim
+
+%files
+    hpc/setup.sh /tmp/setup.sh
+
+%post
+    sh /tmp/setup.sh
+    rm -f /tmp/setup.sh
+
+%environment
+    export MAUDE_LIB=/opt/maude
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8
+
+%test
+    tamarin-prover test
+
+%runscript
+    exec tamarin-prover "$@"
+
+%help
+    Run Tamarin directly: apptainer run tamarin.sif --help
+
+    Open a shell: apptainer shell tamarin.sif
