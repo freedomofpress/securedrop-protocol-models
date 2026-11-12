@@ -21,40 +21,9 @@
 
 set -euo pipefail
 
-IMAGE="${IMAGE:-}"
-SIF="${SIF:-}"
-
 PREFIXES=(Agreement_ Auto_ Easy_ Executability Secrecy_)
 PREFIX="${PREFIXES[$SLURM_ARRAY_TASK_ID]}"
 
-cd "$SLURM_SUBMIT_DIR"
-
+cd "$(git -C "$SLURM_SUBMIT_DIR" rev-parse --show-toplevel)"
 echo "Constructing proof/${PREFIX}.spthy on $(hostname) with ${SLURM_CPUS_PER_TASK} threads"
-
-MAKE_ARGS=(N_THREADS="${SLURM_CPUS_PER_TASK}" -B "proof/${PREFIX}.spthy")
-
-if [ -z "$SIF" ]; then
-    if [ -z "$IMAGE" ]; then
-        echo "error: set IMAGE (for Podman) or SIF (for Apptainer)" >&2
-        exit 2
-    fi
-
-    # Rootless Podman with node-local storage, namespaced per-task for
-    # isolation:
-    STORAGE="${TMPDIR:-/tmp}/${USER}/containers-${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}"
-    PODMAN=(podman --root "$STORAGE/storage" --runroot "$STORAGE/run")
-    trap '"${PODMAN[@]}" unshare rm -rf "$STORAGE" 2>/dev/null || rm -rf "$STORAGE"' EXIT
-
-    echo "Using image ${IMAGE}"
-    "${PODMAN[@]}" pull "$IMAGE"
-    "${PODMAN[@]}" run --rm \
-        --ulimit host \
-        --volume "$PWD:/workspace" \
-        --workdir /workspace \
-        --entrypoint make \
-        "$IMAGE" "${MAKE_ARGS[@]}"
-else
-    echo "Using Apptainer image ${SIF}"
-    apptainer exec "$SIF" bash -c \
-        "ulimit -Sn \$(ulimit -Hn); make ${MAKE_ARGS[*]}"
-fi
+exec hpc/run.sh N_THREADS="${SLURM_CPUS_PER_TASK}" -B "proof/${PREFIX}.spthy"
