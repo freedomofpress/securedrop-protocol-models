@@ -66,26 +66,40 @@ Tamarin traverses proofs using depth-first search and thus typically only needs 
 
 ### Running on HPC
 
-If you have access to an HPC cluster, you can construct and verify proofs inside
-an Apptainer container.  For example, from the root of this repository, via
-Slurm:
+If you have access to an HPC cluster with Slurm, you can construct and verify
+proofs inside a container under either Podman (default) or Apptainer. Run the
+following from the root of this repository.
 
-1. Build the container:
-    ```bash
-    apptainer build --fakeroot tamarin.sif hpc/tamarin.def
-    ```
+1. Build, push, and pin the container image:
+
+   ```bash
+   docker build --platform linux/amd64 --tag ghcr.io/<user>/tamarin:1.12.0 hpc
+   docker push ghcr.io/<user>/tamarin:1.12.0
+   export IMAGE=ghcr.io/<user>/tamarin@sha256:<digest>  # from "docker push"
+   ```
 
 2. Run the well-formedness checks:
-    ```bash
-    salloc --nodes 1 --ntasks 1 --mem=10G --time=1:00:00 apptainer exec tamarin.sif bash -c 'ulimit -Sn $(ulimit -Hn); make well-formed'
-    ```
+
+   ```bash
+   srun --nodes=1 --ntasks=1 --mem=10G --time=1:00:00 hpc/run.sh well-formed
+   ```
 
 3. Verify a proof:
-    ```bash
-    salloc --nodes=1 --ntasks=1 --cpus-per-task=10 --mem=192G --time=12:00:00 apptainer exec tamarin.sif bash -c 'ulimit -Sn $(ulimit -Hn); make proof/Auto_.log'
-    ```
+   ```bash
+   srun --nodes=1 --ntasks=1 --cpus-per-task=10 --mem=192G --time=12:00:00 hpc/run.sh N_THREADS=10 proof/Auto_.log
+   ```
 
 You can also run batch jobs to:
 
 - Verify all proofs: `sbatch hpc/verify.sbatch`
 - Reconstruct all proofs: `sbatch hpc/prove.sbatch`
+
+#### Apptainer
+
+To use Apptainer instead of Podman, build a `.sif` image and set `SIF` in place
+of `IMAGE` in the `srun` and `sbatch` commands above:
+
+```bash
+apptainer build --fakeroot tamarin.sif hpc/tamarin.def
+export SIF=$PWD/tamarin.sif
+```
